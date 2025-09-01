@@ -1,26 +1,139 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Updated color tokens to match Data Safai design brief - clean, professional data science aesthetic */
+  --background: #ffffff; /* Clean white background */
+  --foreground: #475569; /* Professional dark gray for text */
+  --card: #f1f5f9; /* Light gray for card backgrounds */
+  --card-foreground: #475569; /* Dark gray text on cards */
+  --popover: #ffffff; /* White popover backgrounds */
+  --popover-foreground: #475569; /* Dark gray text in popovers */
+  --primary: #059669; /* Emerald primary for growth/innovation */
+  --primary-foreground: #ffffff; /* White text on primary */
+  --secondary: #f1f5f9; /* Light gray for secondary elements */
+  --secondary-foreground: #475569; /* Dark gray text on secondary */
+  --muted: #f1f5f9; /* Light gray for muted elements */
+  --muted-foreground: #64748b; /* Medium gray for muted text */
+  --accent: #10b981; /* Vibrant emerald accent for CTAs */
+  --accent-foreground: #ffffff; /* White text on accent */
+  --destructive: #ea580c; /* Orange for errors/alerts */
+  --destructive-foreground: #ffffff; /* White text on destructive */
+  --border: #d1d5db; /* Light gray borders */
+  --input: #ffffff; /* White input backgrounds */
+  --ring: rgba(5, 150, 105, 0.5); /* Emerald focus rings */
+  --chart-1: #059669;
+  --chart-2: #10b981;
+  --chart-3: #84cc16;
+  --chart-4: #ea580c;
+  --chart-5: #f97316;
+  --radius: 0.5rem; /* Softer rounded corners */
+  --sidebar: #ffffff; /* White sidebar */
+  --sidebar-foreground: #475569; /* Dark gray sidebar text */
+  --sidebar-primary: #f1f5f9; /* Light gray primary sidebar */
+  --sidebar-primary-foreground: #475569; /* Dark gray text on sidebar primary */
+  --sidebar-accent: #10b981; /* Emerald sidebar accent */
+  --sidebar-accent-foreground: #ffffff; /* White text on sidebar accent */
+  --sidebar-border: #d1d5db; /* Light gray sidebar borders */
+  --sidebar-ring: rgba(5, 150, 105, 0.5); /* Emerald sidebar focus */
+  --font-instrument-serif: "Instrument Serif", serif;
+  --font-figtree: "Figtree", sans-serif;
+}
+
+.dark {
+  /* Updated dark mode to maintain professional data science aesthetic */
+  --background: #0f172a; /* Dark slate background */
+  --foreground: #f1f5f9; /* Light gray text */
+  --card: #1e293b; /* Dark slate cards */
+  --card-foreground: #f1f5f9; /* Light gray card text */
+  --popover: #1e293b; /* Dark slate popovers */
+  --popover-foreground: #f1f5f9; /* Light gray popover text */
+  --primary: #10b981; /* Brighter emerald for dark mode */
+  --primary-foreground: #0f172a; /* Dark text on primary */
+  --secondary: #1e293b; /* Dark slate secondary */
+  --secondary-foreground: #f1f5f9; /* Light gray secondary text */
+  --muted: #334155; /* Medium slate for muted */
+  --muted-foreground: #94a3b8; /* Light slate for muted text */
+  --accent: #10b981; /* Emerald accent */
+  --accent-foreground: #0f172a; /* Dark text on accent */
+  --destructive: #f97316; /* Orange for dark mode errors */
+  --destructive-foreground: #f1f5f9; /* Light text on destructive */
+  --border: #334155; /* Medium slate borders */
+  --input: #1e293b; /* Dark slate inputs */
+  --ring: rgba(16, 185, 129, 0.5); /* Emerald focus rings */
+  --chart-1: #10b981;
+  --chart-2: #059669;
+  --chart-3: #84cc16;
+  --chart-4: #f97316;
+  --chart-5: #ea580c;
+  --sidebar: #0f172a; /* Dark slate sidebar */
+  --sidebar-foreground: #f1f5f9; /* Light sidebar text */
+  --sidebar-primary: #1e293b; /* Dark slate primary sidebar */
+  --sidebar-primary-foreground: #f1f5f9; /* Light text on sidebar primary */
+  --sidebar-accent: #10b981; /* Emerald sidebar accent */
+  --sidebar-accent-foreground: #0f172a; /* Dark text on sidebar accent */
+  --sidebar-border: #334155; /* Medium slate sidebar borders */
+  --sidebar-ring: rgba(16, 185, 129, 0.5); /* Emerald sidebar focus */
+  --font-instrument-serif: "Instrument Serif", serif;
+  --font-figtree: "Figtree", sans-serif;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --font-instrument-serif: var(--font-instrument-serif);
+  /* Added Figtree font to theme configuration */
+  --font-sans: var(--font-figtree);
+  --font-figtree: var(--font-figtree);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    /* Set Figtree as the default font family for the entire website */
+    font-family: var(--font-figtree);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.instrument {
+  font-family: var(--font-instrument-serif);
 }

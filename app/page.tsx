@@ -1,9 +1,13 @@
-import Image from "next/image";
+import CTASection from "@/components/CTASection";
+import FeaturesSection from "@/components/FeaturesSection";
+import HeroSection from "@/components/HeroSection";
 
 export default function Home() {
   return (
     <div>
-      <h1>Hello World</h1>
+      <HeroSection />
+      <FeaturesSection />
+      <CTASection />
     </div>
   );
 }
