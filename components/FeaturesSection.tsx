@@ -95,7 +95,7 @@ export default function FeaturesSection() {
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Everything You Need for Clean Data</h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Comprehensive data cleaning tools powered by AI to ensure your datasets are ML-ready
+            Comprehensive data cleaning tools powered by AI to ensure your datasets are ready
           </p>
         </div>
 
