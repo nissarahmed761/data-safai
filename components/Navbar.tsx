@@ -2,9 +2,11 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { UserButton, SignInButton, useUser } from "@clerk/nextjs"
 
 export default function Navbar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false)
+    const { isSignedIn, user } = useUser()
 
     const toggleMenu = () => {
         setIsMenuOpen(!isMenuOpen)
@@ -49,15 +51,31 @@ export default function Navbar() {
 
                     {/* Desktop Buttons */}
                     <div className="hidden md:flex items-center space-x-3">
-                        <Link 
-                            href="/sign-in" 
-                            className="group relative bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90 transition-all duration-300 overflow-hidden min-w-[100px] text-center"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out"></div>
-                            
-                            <span className="relative z-10 block group-hover:hidden">Get Started</span>
-                            <span className="relative z-10 hidden group-hover:block">Sign In</span>
-                        </Link>
+                        {isSignedIn ? (
+                            <div className="flex items-center space-x-3">
+                                <span className="text-sm text-muted-foreground">
+                                    Welcome, {user?.firstName || user?.emailAddresses[0]?.emailAddress}
+                                </span>
+                                <UserButton 
+                                    appearance={{
+                                        elements: {
+                                            userButtonAvatarBox: "w-8 h-8",
+                                            userButtonPopoverCard: "bg-background border-border",
+                                            userButtonPopoverActionButton: "text-foreground hover:bg-muted",
+                                        }
+                                    }}
+                                />
+                            </div>
+                        ) : (
+                            <SignInButton mode="modal">
+                                <button className="group relative bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90 transition-all duration-300 overflow-hidden min-w-[100px] text-center">
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out"></div>
+                                    
+                                    <span className="relative z-10 block group-hover:hidden">Get Started</span>
+                                    <span className="relative z-10 hidden group-hover:block">Sign In</span>
+                                </button>
+                            </SignInButton>
+                        )}
                     </div>
 
                     {/* Mobile menu button */}
@@ -112,20 +130,36 @@ export default function Navbar() {
                                 API
                             </a>
                             <div className="space-y-2">
-                                <Link 
-                                    href="/sign-in" 
-                                    className="group relative w-full text-left text-sm font-medium text-muted-foreground hover:text-foreground px-3 py-2 rounded-md hover:bg-muted transition-all duration-300 overflow-hidden"
-                                >
-                                    {/* Light effect overlay for mobile */}
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out"></div>
-                                    
-                                    {/* Text content for mobile */}
-                                    <span className="relative z-10 block group-hover:hidden">Sign In</span>
-                                    <span className="relative z-10 hidden group-hover:block">Get Started</span>
-                                </Link>
-                                <button className="w-full bg-primary text-primary-foreground px-3 py-2 rounded-md text-sm font-medium hover:bg-primary/90 transition-all duration-200">
-                                    Get Started
-                                </button>
+                                {isSignedIn ? (
+                                    <div className="flex items-center justify-between px-3 py-2">
+                                        <span className="text-sm text-muted-foreground">
+                                            {user?.firstName || user?.emailAddresses[0]?.emailAddress}
+                                        </span>
+                                        <UserButton 
+                                            appearance={{
+                                                elements: {
+                                                    userButtonAvatarBox: "w-8 h-8",
+                                                    userButtonPopoverCard: "bg-background border-border",
+                                                    userButtonPopoverActionButton: "text-foreground hover:bg-muted",
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                ) : (
+                                    <>
+                                        <SignInButton mode="modal">
+                                            <button className="w-full text-left text-sm font-medium text-muted-foreground hover:text-foreground px-3 py-2 rounded-md hover:bg-muted transition-all duration-300">
+                                                Sign In
+                                            </button>
+                                        </SignInButton>
+                                        <Link 
+                                            href="/sign-up" 
+                                            className="block w-full bg-primary text-primary-foreground px-3 py-2 rounded-md text-sm font-medium hover:bg-primary/90 transition-all duration-200 text-center"
+                                        >
+                                            Get Started
+                                        </Link>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>

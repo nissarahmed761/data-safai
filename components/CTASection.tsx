@@ -1,8 +1,12 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import { SignInButton, useUser } from "@clerk/nextjs"
+import Link from "next/link"
 
 export default function CTASection() {
+  const { isSignedIn } = useUser()
+
   return (
     <section className="py-24 px-6 bg-primary/5">
       <div className="max-w-4xl mx-auto text-center">
@@ -12,12 +16,32 @@ export default function CTASection() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 text-base">
-            Sign In to Continue
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-            </svg>
-          </Button>
+          {isSignedIn ? (
+            <Link href="/dashboard">
+              <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 text-base">
+                Go to Dashboard
+                <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </Button>
+            </Link>
+          ) : (
+            <>
+              <SignInButton mode="modal">
+                <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 text-base">
+                  Sign In to Continue
+                  <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </Button>
+              </SignInButton>
+              <Link href="/sign-up">
+                <Button size="lg" variant="outline" className="px-8 py-3 text-base">
+                  Create Account
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </section>
