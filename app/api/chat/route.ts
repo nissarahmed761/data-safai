@@ -1,4 +1,4 @@
-import { streamText, stepCountIs } from "ai"
+import { streamText, stepCountIs, convertToModelMessages } from "ai"
 import { openrouter } from "@/lib/agent/provider"
 import { loadFileContext, buildSystemPrompt } from "@/lib/agent/context"
 import { createTools } from "@/lib/agent/tools"
@@ -30,10 +30,13 @@ export async function POST(req: Request) {
 
   const tools = createTools(fileContext)
 
+  // Convert UIMessages (parts-based) from useChat to ModelMessages (content-based) for streamText
+  const modelMessages = await convertToModelMessages(messages)
+
   const result = streamText({
     model: openrouter("openai/gpt-5-nano"),
     system: buildSystemPrompt(fileContext),
-    messages,
+    messages: modelMessages,
     tools,
     stopWhen: stepCountIs(5),
   })
