@@ -12,10 +12,13 @@
     "db:generate": "bun --env-file=.env.local node_modules/.bin/drizzle-kit generate"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.33",
+    "@ai-sdk/react": "^3.0.102",
     "@aws-sdk/client-s3": "^3.997.0",
     "@clerk/nextjs": "^6.38.2",
     "@neondatabase/serverless": "^1.0.2",
     "@radix-ui/react-slot": "^1.2.4",
+    "ai": "^6.0.100",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.1",
@@ -26,7 +29,8 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "svix": "^1.86.0",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.4",
