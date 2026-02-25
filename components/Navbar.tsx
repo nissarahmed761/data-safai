@@ -2,169 +2,142 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { UserButton, SignInButton, useUser } from "@clerk/nextjs"
+import { UserButton, useUser } from "@clerk/nextjs"
+import { Sparkles } from "lucide-react"
+import ThemeToggle from "@/components/ThemeToggle"
 
 export default function Navbar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const { isSignedIn, user } = useUser()
 
-    const toggleMenu = () => {
-        setIsMenuOpen(!isMenuOpen)
-    }
-
     return (
-        <header className="relative z-20 bg-background/95 backdrop-blur-sm border-b border-border">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
+            <div className="mx-auto max-w-7xl px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                     {/* Logo */}
-                    <div className="flex items-center">
-                        <Link href="/" className="flex items-center space-x-2">
-                            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                                <svg className="w-5 h-5 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                    />
-                                </svg>
-                            </div>
-                            <span className="text-xl font-semibold text-foreground">Data Safai</span>
-                        </Link>
-                    </div>
+                    <Link href="/" className="group flex items-center gap-2.5">
+                        <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-primary shadow-sm shadow-primary/25 transition-transform duration-300 group-hover:scale-105">
+                            <Sparkles className="h-4 w-4 text-primary-foreground" />
+                        </div>
+                        <span className="text-lg font-bold tracking-tight text-foreground">
+                            Data <span className="text-primary">Safai</span>
+                        </span>
+                    </Link>
 
                     {/* Desktop Navigation */}
-                    <nav className="hidden md:flex items-center space-x-2">
+                    <nav className="hidden md:flex items-center gap-1">
                         <a
                             href="#features"
-                            className="text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2 rounded-md hover:bg-muted transition-all duration-200"
+                            className="relative px-4 py-2 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground rounded-lg hover:bg-muted/60"
                         >
                             Features
                         </a>
                         <a
                             href="#cta"
-                            className="text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2 rounded-md hover:bg-muted transition-all duration-200"
+                            className="relative px-4 py-2 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground rounded-lg hover:bg-muted/60"
                         >
                             API
                         </a>
                     </nav>
 
-                    {/* Desktop Buttons */}
-                    <div className="hidden md:flex items-center space-x-3">
+                    {/* Desktop Auth */}
+                    <div className="hidden md:flex items-center gap-4">
+                        <ThemeToggle />
                         {isSignedIn ? (
-                            <div className="flex items-center space-x-3">
+                            <div className="flex items-center gap-3">
                                 <span className="text-sm text-muted-foreground">
-                                    Welcome, {user?.firstName || user?.emailAddresses[0]?.emailAddress}
+                                    {user?.firstName || user?.emailAddresses[0]?.emailAddress}
                                 </span>
-                                <UserButton 
+                                <UserButton
                                     appearance={{
                                         elements: {
-                                            userButtonAvatarBox: "w-8 h-8",
-                                            userButtonPopoverCard: "bg-background border-border",
+                                            userButtonAvatarBox: "w-8 h-8 ring-2 ring-border",
+                                            userButtonPopoverCard: "bg-background border-border shadow-xl",
                                             userButtonPopoverActionButton: "text-foreground hover:bg-muted",
                                         }
                                     }}
                                 />
                             </div>
                         ) : (
-                            <SignInButton mode="modal">
-                                <button className="group relative bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90 transition-all duration-300 overflow-hidden min-w-[100px] text-center">
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out"></div>
-                                    
-                                    <span className="relative z-10 block group-hover:hidden">Get Started</span>
-                                    <span className="relative z-10 hidden group-hover:block">Sign In</span>
-                                </button>
-                            </SignInButton>
+                            <Link
+                                href="/sign-in"
+                                className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/20 transition-all duration-200 hover:bg-primary/90 hover:shadow-md hover:shadow-primary/25 active:scale-[0.98]"
+                            >
+                                Get Started
+                                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                            </Link>
                         )}
                     </div>
 
                     {/* Mobile menu button */}
-                    <div className="md:hidden">
-                        <button
-                            onClick={toggleMenu}
-                            className="text-muted-foreground hover:text-foreground p-2 rounded-md hover:bg-muted transition-all duration-200"
-                            aria-label="Toggle menu"
-                        >
-                            <svg
-                                className="w-6 h-6"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                {isMenuOpen ? (
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                ) : (
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M4 6h16M4 12h16M4 18h16"
-                                    />
-                                )}
-                            </svg>
-                        </button>
-                    </div>
+                    <button
+                        onClick={() => setIsMenuOpen(!isMenuOpen)}
+                        className="md:hidden relative flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        aria-label="Toggle menu"
+                    >
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            {isMenuOpen ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            ) : (
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                            )}
+                        </svg>
+                    </button>
                 </div>
+            </div>
 
-                {/* Mobile Navigation */}
-                {isMenuOpen && (
-                    <div className="md:hidden">
-                        <div className="px-2 pt-2 pb-3 space-y-1 border-t border-border">
-                            <a
-                                href="#features"
-                                className="block text-muted-foreground hover:text-foreground text-sm font-medium px-3 py-2 rounded-md hover:bg-muted transition-all duration-200"
-                                onClick={() => setIsMenuOpen(false)}
-                            >
-                                Features
-                            </a>
-                            <a
-                                href="#cta"
-                                className="block text-muted-foreground hover:text-foreground text-sm font-medium px-3 py-2 rounded-md hover:bg-muted transition-all duration-200"
-                                onClick={() => setIsMenuOpen(false)}
-                            >
-                                API
-                            </a>
-                            <div className="space-y-2">
-                                {isSignedIn ? (
-                                    <div className="flex items-center justify-between px-3 py-2">
-                                        <span className="text-sm text-muted-foreground">
-                                            {user?.firstName || user?.emailAddresses[0]?.emailAddress}
-                                        </span>
-                                        <UserButton 
-                                            appearance={{
-                                                elements: {
-                                                    userButtonAvatarBox: "w-8 h-8",
-                                                    userButtonPopoverCard: "bg-background border-border",
-                                                    userButtonPopoverActionButton: "text-foreground hover:bg-muted",
-                                                }
-                                            }}
-                                        />
-                                    </div>
-                                ) : (
-                                    <>
-                                        <SignInButton mode="modal">
-                                            <button className="w-full text-left text-sm font-medium text-muted-foreground hover:text-foreground px-3 py-2 rounded-md hover:bg-muted transition-all duration-300">
-                                                Sign In
-                                            </button>
-                                        </SignInButton>
-                                        <Link 
-                                            href="/sign-up" 
-                                            className="block w-full bg-primary text-primary-foreground px-3 py-2 rounded-md text-sm font-medium hover:bg-primary/90 transition-all duration-200 text-center"
-                                        >
-                                            Get Started
-                                        </Link>
-                                    </>
-                                )}
-                            </div>
+            {/* Mobile Navigation */}
+            {isMenuOpen && (
+                <div className="md:hidden border-t border-border/50 bg-background/95 backdrop-blur-lg animate-fade-in">
+                    <div className="mx-auto max-w-7xl px-6 py-4 space-y-1">
+                        <a
+                            href="#features"
+                            className="block rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                            onClick={() => setIsMenuOpen(false)}
+                        >
+                            Features
+                        </a>
+                        <a
+                            href="#cta"
+                            className="block rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                            onClick={() => setIsMenuOpen(false)}
+                        >
+                            API
+                        </a>
+                        <div className="flex items-center justify-between px-3 py-2">
+                            <span className="text-sm text-muted-foreground">Theme</span>
+                            <ThemeToggle />
+                        </div>
+                        <div className="pt-3 border-t border-border/50">
+                            {isSignedIn ? (
+                                <div className="flex items-center justify-between px-3 py-2">
+                                    <span className="text-sm text-muted-foreground">
+                                        {user?.firstName || user?.emailAddresses[0]?.emailAddress}
+                                    </span>
+                                    <UserButton
+                                        appearance={{
+                                            elements: {
+                                                userButtonAvatarBox: "w-8 h-8",
+                                                userButtonPopoverCard: "bg-background border-border",
+                                                userButtonPopoverActionButton: "text-foreground hover:bg-muted",
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            ) : (
+                                <Link
+                                    href="/sign-in"
+                                    className="block w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 text-center"
+                                >
+                                    Get Started
+                                </Link>
+                            )}
                         </div>
                     </div>
-                )}
-            </div>
+                </div>
+            )}
         </header>
     )
 }
