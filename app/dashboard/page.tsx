@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useUser, UserButton } from "@clerk/nextjs"
 import { redirect } from "next/navigation"
 import {
@@ -13,6 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   History,
+  PanelBottomClose,
+  PanelBottomOpen,
 } from "lucide-react"
 import Sidebar, { type Project } from "@/components/dashboard/Sidebar"
 import AIPanel from "@/components/dashboard/AIPanel"
@@ -64,6 +66,11 @@ export default function DashboardPage() {
   const [fileData, setFileData] = useState<FileData | null>(null)
   const [fileLoading, setFileLoading] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+  const [aiPanelHeight, setAiPanelHeight] = useState(224) // default h-56 = 224px
+  const [aiPanelCollapsed, setAiPanelCollapsed] = useState(false)
+  const isDragging = useRef(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const lastHeight = useRef(224)
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -173,7 +180,21 @@ export default function DashboardPage() {
         </div>
 
         {/* Content + AI Panel */}
-        <div className="flex flex-1 flex-col gap-4 p-4 min-h-0 overflow-hidden">
+        <div
+          ref={containerRef}
+          className="flex flex-1 flex-col p-4 min-h-0 overflow-hidden"
+          onMouseMove={(e) => {
+            if (!isDragging.current || !containerRef.current) return
+            const containerRect = containerRef.current.getBoundingClientRect()
+            const newHeight = containerRect.bottom - e.clientY - 16 // 16px for padding
+            const clamped = Math.max(48, Math.min(newHeight, containerRect.height - 120))
+            setAiPanelHeight(clamped)
+            lastHeight.current = clamped
+            setAiPanelCollapsed(false)
+          }}
+          onMouseUp={() => { isDragging.current = false }}
+          onMouseLeave={() => { isDragging.current = false }}
+        >
           {/* Main Content */}
           <div className="flex-1 min-h-0 overflow-y-auto">
             {fileLoading ? (
@@ -350,8 +371,43 @@ export default function DashboardPage() {
             )}
           </div>
 
+          {/* Resize Handle */}
+          <div
+            className="shrink-0 flex items-center justify-center py-1 group cursor-row-resize select-none"
+            onMouseDown={(e) => {
+              e.preventDefault()
+              isDragging.current = true
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <div className="h-1 w-12 rounded-full bg-border group-hover:bg-primary/50 transition-colors" />
+              <button
+                onClick={() => {
+                  if (aiPanelCollapsed) {
+                    setAiPanelCollapsed(false)
+                    setAiPanelHeight(lastHeight.current)
+                  } else {
+                    setAiPanelCollapsed(true)
+                  }
+                }}
+                className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title={aiPanelCollapsed ? "Expand AI panel" : "Collapse AI panel"}
+              >
+                {aiPanelCollapsed ? (
+                  <PanelBottomOpen className="h-3 w-3" />
+                ) : (
+                  <PanelBottomClose className="h-3 w-3" />
+                )}
+              </button>
+              <div className="h-1 w-12 rounded-full bg-border group-hover:bg-primary/50 transition-colors" />
+            </div>
+          </div>
+
           {/* AI Panel */}
-          <div className="h-56 shrink-0">
+          <div
+            className="shrink-0 transition-[height] duration-200 ease-out"
+            style={{ height: aiPanelCollapsed ? 0 : aiPanelHeight, overflow: aiPanelCollapsed ? "hidden" : undefined }}
+          >
             <AIPanel
               fileId={selectedFileId}
               onFileChanged={() => {
