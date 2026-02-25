@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useMemo } from "react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport, isToolUIPart, getToolName } from "ai"
 import {
@@ -22,13 +22,19 @@ interface AIPanelProps {
 export default function AIPanel({ fileId, onFileChanged }: AIPanelProps) {
   const [input, setInput] = useState("")
   const scrollRef = useRef<HTMLDivElement>(null)
+  const fileIdRef = useRef(fileId)
+  fileIdRef.current = fileId
 
-  const { messages, sendMessage, status } = useChat({
-    transport: new DefaultChatTransport({
-      api: "/api/chat",
-      body: { fileId },
-    }),
-  })
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+        body: () => ({ fileId: fileIdRef.current }),
+      }),
+    []
+  )
+
+  const { messages, sendMessage, status } = useChat({ transport })
 
   const isLoading = status === "streaming" || status === "submitted"
 

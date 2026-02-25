@@ -31,7 +31,7 @@ export async function POST(req: Request) {
   const tools = createTools(fileContext)
 
   const result = streamText({
-    model: openrouter("anthropic/claude-sonnet-4"),
+    model: openrouter("openai/gpt-5-nano"),
     system: buildSystemPrompt(fileContext),
     messages,
     tools,
