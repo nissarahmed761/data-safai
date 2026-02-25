@@ -1,118 +1,95 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ScanSearch, Zap, BarChart3, FileJson, ShieldCheck, Code2 } from "lucide-react"
+
+const features = [
+  {
+    icon: ScanSearch,
+    title: "Automated Detection",
+    description:
+      "AI algorithms automatically identify missing values, outliers, duplicates, and inconsistencies in your datasets.",
+  },
+  {
+    icon: Zap,
+    title: "Smart Cleaning",
+    description:
+      "Intelligent preprocessing that preserves data integrity while fixing quality issues using ML-based approaches.",
+  },
+  {
+    icon: BarChart3,
+    title: "Quality Reports",
+    description:
+      "Comprehensive data quality reports with visualizations and recommendations for further improvements.",
+  },
+  {
+    icon: FileJson,
+    title: "Multiple Formats",
+    description:
+      "Support for CSV, JSON, Parquet, and database connections with seamless integration into your workflow.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Enterprise Security",
+    description: "SOC 2 compliant with end-to-end encryption. Your data never leaves your secure environment.",
+  },
+  {
+    icon: Code2,
+    title: "API Integration",
+    description: "RESTful API and Python SDK for seamless integration into your existing ML pipelines and workflows.",
+  },
+]
 
 export default function FeaturesSection() {
-  const features = [
-    {
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-      ),
-      title: "Automated Detection",
-      description:
-        "AI algorithms automatically identify missing values, outliers, duplicates, and inconsistencies in your datasets.",
-    },
-    {
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
-      ),
-      title: "Smart Cleaning",
-      description:
-        "Intelligent preprocessing that preserves data integrity while fixing quality issues using ML-based approaches.",
-    },
-    {
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-          />
-        </svg>
-      ),
-      title: "Quality Reports",
-      description:
-        "Comprehensive data quality reports with visualizations and recommendations for further improvements.",
-    },
-    {
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-          />
-        </svg>
-      ),
-      title: "Multiple Formats",
-      description:
-        "Support for CSV, JSON, Parquet, and database connections with seamless integration into your workflow.",
-    },
-    {
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-          />
-        </svg>
-      ),
-      title: "Enterprise Security",
-      description: "SOC 2 compliant with end-to-end encryption. Your data never leaves your secure environment.",
-    },
-    {
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-          />
-        </svg>
-      ),
-      title: "API Integration",
-      description: "RESTful API and Python SDK for seamless integration into your existing ML pipelines and workflows.",
-    },
-  ]
-
   return (
-    <section id="features" className="py-24 px-6 bg-muted/30">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Everything You Need for Clean Data</h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Comprehensive data cleaning tools powered by AI to ensure your datasets are ready
+    <section id="features" className="relative py-28 lg:py-36">
+      {/* Subtle background treatment */}
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-muted/30 to-transparent" />
+
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        {/* Section header */}
+        <div className="mx-auto max-w-2xl text-center animate-fade-up">
+          <span className="text-sm font-semibold tracking-wide text-primary uppercase">Features</span>
+          <h2 className="mt-3 text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-foreground">
+            Everything You Need for{" "}
+            <span className="instrument italic text-primary">Clean&nbsp;Data</span>
+          </h2>
+          <p className="mt-5 text-lg leading-relaxed text-muted-foreground text-pretty">
+            Comprehensive data cleaning tools powered by AI to ensure your datasets are ready for production.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, index) => (
-            <Card key={index} className="border-border hover:shadow-lg transition-shadow duration-200">
-              <CardHeader>
-                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center text-primary mb-4">
-                  {feature.icon}
+        {/* Feature grid */}
+        <div className="mt-20 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {features.map((feature, index) => {
+            const Icon = feature.icon
+            const delayClass = [
+              "delay-100",
+              "delay-200",
+              "delay-300",
+              "delay-400",
+              "delay-500",
+              "delay-600",
+            ][index] ?? ""
+
+            return (
+              <div
+                key={feature.title}
+                className={`group relative rounded-2xl border border-border/50 bg-card/60 backdrop-blur-sm p-8 transition-all duration-300 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 animate-fade-up ${delayClass}`}
+              >
+                {/* Accent bar on hover */}
+                <div className="absolute inset-x-0 top-0 h-0.5 rounded-t-2xl bg-gradient-to-r from-primary/0 via-primary to-primary/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-primary-foreground">
+                  <Icon className="h-6 w-6" />
                 </div>
-                <CardTitle className="text-xl font-semibold">{feature.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-muted-foreground">{feature.description}</CardDescription>
-              </CardContent>
-            </Card>
-          ))}
+
+                <h3 className="text-lg font-semibold text-foreground">{feature.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {feature.description}
+                </p>
+              </div>
+            )
+          })}
         </div>
       </div>
     </section>
