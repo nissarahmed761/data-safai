@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { useSignIn } from "@clerk/nextjs"
+import { useSignIn, useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import { Sparkles, Loader2 } from "lucide-react"
 
@@ -13,7 +13,14 @@ export default function SignInPage() {
   const [error, setError] = useState("")
 
   const { signIn, isLoaded, setActive } = useSignIn()
+  const { isSignedIn } = useUser()
   const router = useRouter()
+
+  // Redirect to dashboard if already authenticated
+  if (isSignedIn) {
+    router.replace("/dashboard")
+    return null
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

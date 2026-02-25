@@ -45,9 +45,12 @@ export default function Navbar() {
                         <ThemeToggle />
                         {isSignedIn ? (
                             <div className="flex items-center gap-3">
-                                <span className="text-sm text-muted-foreground">
-                                    {user?.firstName || user?.emailAddresses[0]?.emailAddress}
-                                </span>
+                                <Link
+                                    href="/dashboard"
+                                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/20 transition-all duration-200 hover:bg-primary/90 hover:shadow-md hover:shadow-primary/25 active:scale-[0.98]"
+                                >
+                                    Dashboard
+                                </Link>
                                 <UserButton
                                     appearance={{
                                         elements: {
@@ -112,19 +115,28 @@ export default function Navbar() {
                         </div>
                         <div className="pt-3 border-t border-border/50">
                             {isSignedIn ? (
-                                <div className="flex items-center justify-between px-3 py-2">
-                                    <span className="text-sm text-muted-foreground">
-                                        {user?.firstName || user?.emailAddresses[0]?.emailAddress}
-                                    </span>
-                                    <UserButton
-                                        appearance={{
-                                            elements: {
-                                                userButtonAvatarBox: "w-8 h-8",
-                                                userButtonPopoverCard: "bg-background border-border",
-                                                userButtonPopoverActionButton: "text-foreground hover:bg-muted",
-                                            }
-                                        }}
-                                    />
+                                <div className="space-y-2">
+                                    <Link
+                                        href="/dashboard"
+                                        className="block w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 text-center"
+                                        onClick={() => setIsMenuOpen(false)}
+                                    >
+                                        Dashboard
+                                    </Link>
+                                    <div className="flex items-center justify-between px-3 py-2">
+                                        <span className="text-sm text-muted-foreground">
+                                            {user?.firstName || user?.emailAddresses[0]?.emailAddress}
+                                        </span>
+                                        <UserButton
+                                            appearance={{
+                                                elements: {
+                                                    userButtonAvatarBox: "w-8 h-8",
+                                                    userButtonPopoverCard: "bg-background border-border",
+                                                    userButtonPopoverActionButton: "text-foreground hover:bg-muted",
+                                                }
+                                            }}
+                                        />
+                                    </div>
                                 </div>
                             ) : (
                                 <Link

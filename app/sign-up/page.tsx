@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { useSignUp } from "@clerk/nextjs"
+import { useSignUp, useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import { Sparkles, Loader2 } from "lucide-react"
 
@@ -20,7 +20,14 @@ export default function SignUpPage() {
   const [verificationCode, setVerificationCode] = useState("")
 
   const { signUp, isLoaded, setActive } = useSignUp()
+  const { isSignedIn } = useUser()
   const router = useRouter()
+
+  // Redirect to dashboard if already authenticated
+  if (isSignedIn) {
+    router.replace("/dashboard")
+    return null
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

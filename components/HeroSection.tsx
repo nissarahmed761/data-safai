@@ -2,10 +2,12 @@
 
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
+import { useUser } from "@clerk/nextjs"
 import { Zap, ArrowRight, CheckCircle2, XCircle, Sparkles } from "lucide-react"
 
 export default function HeroSection() {
   const router = useRouter()
+  const { isSignedIn } = useUser()
   return (
     <section className="relative overflow-hidden">
       {/* Background decoration */}
@@ -44,9 +46,9 @@ export default function HeroSection() {
               <Button
                 size="lg"
                 className="group bg-primary hover:bg-primary/90 text-primary-foreground px-8 text-base shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/25 transition-all duration-300"
-                onClick={() => router.push('/sign-up')}
+                onClick={() => router.push(isSignedIn ? '/dashboard' : '/sign-up')}
               >
-                Get Started Free
+                {isSignedIn ? 'Go to Dashboard' : 'Get Started Free'}
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
               </Button>
               <Button
