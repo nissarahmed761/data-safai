@@ -34,7 +34,7 @@ export async function POST(req: Request) {
   const modelMessages = await convertToModelMessages(messages)
 
   const result = streamText({
-    model: openrouter("openai/gpt-5-nano"),
+    model: openrouter.chat("openai/gpt-5-nano"),
     system: buildSystemPrompt(fileContext),
     messages: modelMessages,
     tools,
