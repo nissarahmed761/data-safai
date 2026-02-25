@@ -1,161 +1,370 @@
 "use client"
 
-import { useUser } from "@clerk/nextjs";
-import { redirect } from "next/navigation";
+import { useState, useEffect, useCallback } from "react"
+import { useUser, UserButton } from "@clerk/nextjs"
+import { redirect } from "next/navigation"
+import {
+  Upload,
+  FileSpreadsheet,
+  FileJson,
+  Plus,
+  Loader2,
+  Github,
+  ChevronLeft,
+  ChevronRight,
+  History,
+} from "lucide-react"
+import Sidebar, { type Project } from "@/components/dashboard/Sidebar"
+import AIPanel from "@/components/dashboard/AIPanel"
+import UploadModal from "@/components/dashboard/UploadModal"
+import ThemeToggle from "@/components/ThemeToggle"
+
+interface FileData {
+  id: string
+  name: string
+  originalName: string
+  size: number
+  mimeType: string
+  projectId: string
+  currentVersion: {
+    id: string
+    versionNumber: number
+    rowCount: number
+    columnCount: number
+    columns: { name: string; type: string }[]
+    changeDescription: string
+    changedBy: string
+    createdAt: string
+  }
+  versions: {
+    id: string
+    versionNumber: number
+    rowCount: number
+    columnCount: number
+    changeDescription: string
+    changedBy: string
+    createdAt: string
+  }[]
+  data: Record<string, unknown>[]
+  pagination: {
+    page: number
+    pageSize: number
+    totalRows: number
+    totalPages: number
+  }
+}
 
 export default function DashboardPage() {
-  const { isSignedIn, user, isLoaded } = useUser();
+  const { isSignedIn, isLoaded } = useUser()
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(null)
+  const [projects, setProjects] = useState<Project[]>([])
+  const [projectsLoading, setProjectsLoading] = useState(true)
+  const [uploadModalOpen, setUploadModalOpen] = useState(false)
+  const [fileData, setFileData] = useState<FileData | null>(null)
+  const [fileLoading, setFileLoading] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
 
-  // Redirect to sign-in if not authenticated
-  if (isLoaded && !isSignedIn) {
-    redirect("/sign-in");
+  const fetchProjects = useCallback(async () => {
+    try {
+      const res = await fetch("/api/projects")
+      if (res.ok) {
+        const data = await res.json()
+        setProjects(data)
+      }
+    } catch (err) {
+      console.error("Failed to fetch projects:", err)
+    } finally {
+      setProjectsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      fetchProjects()
+    }
+  }, [isLoaded, isSignedIn, fetchProjects])
+
+  // Fetch file data when selected
+  const fetchFileData = useCallback(async (fileId: string, page = 1) => {
+    setFileLoading(true)
+    try {
+      const res = await fetch(`/api/files/${fileId}?page=${page}&pageSize=50`)
+      if (res.ok) {
+        const data = await res.json()
+        setFileData(data)
+        setCurrentPage(page)
+      }
+    } catch (err) {
+      console.error("Failed to fetch file:", err)
+    } finally {
+      setFileLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (selectedFileId) {
+      fetchFileData(selectedFileId, 1)
+    } else {
+      setFileData(null)
+    }
+  }, [selectedFileId, fetchFileData])
+
+  const handleCreateProject = async (name: string) => {
+    const res = await fetch("/api/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    })
+    if (res.ok) {
+      await fetchProjects()
+    }
   }
 
-  // Show loading state while Clerk is loading
+  const handleDeleteProject = async (projectId: string) => {
+    const res = await fetch(`/api/projects/${projectId}`, { method: "DELETE" })
+    if (res.ok) {
+      setProjects((prev) => prev.filter((p) => p.id !== projectId))
+      const deleted = projects.find((p) => p.id === projectId)
+      if (deleted?.files.some((f) => f.id === selectedFileId)) {
+        setSelectedFileId(null)
+      }
+    }
+  }
+
+  if (isLoaded && !isSignedIn) {
+    redirect("/sign-in")
+  }
+
   if (!isLoaded) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="flex h-full items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
-    );
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-foreground mb-4">
-            Welcome to Your Dashboard
-          </h1>
-          <p className="text-xl text-muted-foreground">
-            Hello, {user?.firstName || user?.emailAddresses[0]?.emailAddress}!
-          </p>
+    <div className="flex h-full">
+      {/* Sidebar */}
+      <Sidebar
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed((c) => !c)}
+        projects={projects}
+        isLoading={projectsLoading}
+        selectedFileId={selectedFileId}
+        onFileSelect={setSelectedFileId}
+        onCreateProject={handleCreateProject}
+        onDeleteProject={handleDeleteProject}
+      />
+
+      {/* Main Area */}
+      <div className="flex flex-1 flex-col min-w-0">
+        {/* Top Bar */}
+        <div className="flex h-12 items-center justify-end gap-3 border-b border-border px-4 shrink-0">
+          <ThemeToggle />
+          <UserButton
+            appearance={{
+              elements: {
+                userButtonAvatarBox: "w-7 h-7",
+              },
+            }}
+          />
         </div>
 
-        {/* Dashboard Content */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Data Cleaning Stats */}
-          <div className="bg-background border border-border rounded-lg p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-foreground">Data Cleaning</h3>
-              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
+        {/* Content + AI Panel */}
+        <div className="flex flex-1 flex-col gap-4 p-4 min-h-0 overflow-hidden">
+          {/* Main Content */}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {fileLoading ? (
+              <div className="h-full flex items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Datasets Cleaned</span>
-                <span className="font-semibold text-foreground">12</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Records</span>
-                <span className="font-semibold text-foreground">45,678</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Accuracy</span>
-                <span className="font-semibold text-green-600">98.5%</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Activity */}
-          <div className="bg-background border border-border rounded-lg p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-foreground">Recent Activity</h3>
-              <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm text-muted-foreground">Dataset "sales_2024" cleaned</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-sm text-muted-foreground">New AI model deployed</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                <span className="text-sm text-muted-foreground">API usage increased</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-background border border-border rounded-lg p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-foreground">Quick Actions</h3>
-              <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <button className="w-full bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90 transition-all duration-200">
-                Upload New Dataset
-              </button>
-              <button className="w-full bg-muted text-foreground px-4 py-2 rounded-md text-sm font-medium hover:bg-muted/80 transition-all duration-200">
-                View Analytics
-              </button>
-              <button className="w-full bg-muted text-foreground px-4 py-2 rounded-md text-sm font-medium hover:bg-muted/80 transition-all duration-200">
-                Manage API Keys
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* User Profile Section */}
-        <div className="mt-12 bg-background border border-border rounded-lg p-6 shadow-sm">
-          <h2 className="text-2xl font-bold text-foreground mb-6">Your Profile</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="text-lg font-semibold text-foreground mb-3">Account Information</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Email:</span>
-                  <span className="text-foreground">{user?.emailAddresses[0]?.emailAddress}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Name:</span>
-                  <span className="text-foreground">
-                    {user?.firstName} {user?.lastName}
+            ) : fileData ? (
+              /* Real File Viewer */
+              <div className="h-full rounded-xl border border-border bg-card/50 p-6 flex flex-col">
+                {/* File header */}
+                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border/50 shrink-0">
+                  <FileSpreadsheet className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-semibold text-foreground">
+                    {fileData.name}
                   </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Member Since:</span>
-                  <span className="text-foreground">
-                    {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                  <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                    {fileData.name.endsWith(".json") ? "JSON" : "CSV"}
                   </span>
+                  <span className="text-xs text-muted-foreground">
+                    {fileData.currentVersion.rowCount} rows &middot;{" "}
+                    {fileData.currentVersion.columnCount} cols
+                  </span>
+                  {fileData.versions.length > 1 && (
+                    <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+                      <History className="h-3 w-3" />
+                      v{fileData.currentVersion.versionNumber}
+                    </span>
+                  )}
+                </div>
+
+                {/* Table */}
+                <div className="flex-1 min-h-0 overflow-auto rounded-lg border border-border">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-muted/60 backdrop-blur-sm">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border w-12">
+                          #
+                        </th>
+                        {fileData.currentVersion.columns.map((col) => (
+                          <th
+                            key={col.name}
+                            className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border"
+                          >
+                            <span>{col.name}</span>
+                            <span className="ml-1 text-[10px] text-muted-foreground/50 lowercase">
+                              {col.type}
+                            </span>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/50">
+                      {fileData.data.map((row, i) => (
+                        <tr
+                          key={i}
+                          className="hover:bg-muted/30 transition-colors"
+                        >
+                          <td className="px-3 py-2 text-xs text-muted-foreground tabular-nums">
+                            {(currentPage - 1) * 50 + i + 1}
+                          </td>
+                          {fileData.currentVersion.columns.map((col) => (
+                            <td
+                              key={col.name}
+                              className="px-3 py-2 text-foreground max-w-[200px] truncate"
+                            >
+                              {row[col.name] === null ||
+                              row[col.name] === undefined ||
+                              row[col.name] === "" ? (
+                                <span className="text-muted-foreground/40 italic text-xs">
+                                  null
+                                </span>
+                              ) : (
+                                String(row[col.name])
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                <div className="flex items-center justify-between pt-3 shrink-0">
+                  <p className="text-xs text-muted-foreground">
+                    Showing{" "}
+                    {Math.min(
+                      (currentPage - 1) * 50 + 1,
+                      fileData.pagination.totalRows
+                    )}
+                    –
+                    {Math.min(
+                      currentPage * 50,
+                      fileData.pagination.totalRows
+                    )}{" "}
+                    of {fileData.pagination.totalRows} rows &middot; Give
+                    instructions to the AI below to clean this data.
+                  </p>
+                  {fileData.pagination.totalPages > 1 && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() =>
+                          fetchFileData(selectedFileId!, currentPage - 1)
+                        }
+                        disabled={currentPage === 1}
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-30"
+                      >
+                        <ChevronLeft className="h-3.5 w-3.5" />
+                      </button>
+                      <span className="text-xs text-muted-foreground tabular-nums px-2">
+                        {currentPage} / {fileData.pagination.totalPages}
+                      </span>
+                      <button
+                        onClick={() =>
+                          fetchFileData(selectedFileId!, currentPage + 1)
+                        }
+                        disabled={
+                          currentPage === fileData.pagination.totalPages
+                        }
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted disabled:opacity-30"
+                      >
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-foreground mb-3">Subscription</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Plan:</span>
-                  <span className="text-foreground">Free Tier</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">API Calls:</span>
-                  <span className="text-foreground">1,000 / month</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Storage:</span>
-                  <span className="text-foreground">5 GB</span>
+            ) : (
+              /* Empty / Import State */
+              <div className="h-full flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/60 bg-card/30">
+                <div className="max-w-md text-center space-y-5">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+                    <Upload className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-foreground mb-1">
+                      Import your data
+                    </h2>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Upload CSV/JSON files or connect a GitHub repository.
+                      <br />
+                      View and clean your data with AI assistance.
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-3">
+                    <button
+                      onClick={() => setUploadModalOpen(true)}
+                      className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Upload Files
+                    </button>
+                    <button
+                      className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted opacity-60 cursor-not-allowed"
+                      title="Coming soon — GitHub import"
+                      disabled
+                    >
+                      <Github className="h-4 w-4" />
+                      Import Repository
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <FileSpreadsheet className="h-3 w-3" />
+                      .csv
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <FileJson className="h-3 w-3" />
+                      .json
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+          </div>
+
+          {/* AI Panel */}
+          <div className="h-56 shrink-0">
+            <AIPanel />
           </div>
         </div>
       </div>
+
+      {/* Upload Modal */}
+      <UploadModal
+        open={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        projects={projects}
+        onUploadComplete={fetchProjects}
+        onCreateProject={handleCreateProject}
+      />
     </div>
-  );
+  )
 } 
