@@ -352,7 +352,13 @@ export default function DashboardPage() {
 
           {/* AI Panel */}
           <div className="h-56 shrink-0">
-            <AIPanel />
+            <AIPanel
+              fileId={selectedFileId}
+              onFileChanged={() => {
+                if (selectedFileId) fetchFileData(selectedFileId, currentPage)
+                fetchProjects()
+              }}
+            />
           </div>
         </div>
       </div>
