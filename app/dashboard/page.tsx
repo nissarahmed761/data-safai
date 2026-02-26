@@ -17,11 +17,13 @@ import {
   PanelBottomOpen,
   RotateCcw,
   RefreshCw,
+  Search,
 } from "lucide-react"
 import Sidebar, { type Project } from "@/components/dashboard/Sidebar"
 import AIPanel from "@/components/dashboard/AIPanel"
 import VersionPanel from "@/components/dashboard/VersionPanel"
 import UploadModal from "@/components/dashboard/UploadModal"
+import SearchModal from "@/components/dashboard/SearchModal"
 import ThemeToggle from "@/components/ThemeToggle"
 
 interface FileData {
@@ -74,6 +76,7 @@ export default function DashboardPage() {
   const [viewingVersionId, setViewingVersionId] = useState<string | null>(null)
   const [aiPanelHeight, setAiPanelHeight] = useState(224) // default h-56 = 224px
   const [aiPanelCollapsed, setAiPanelCollapsed] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const isDragging = useRef(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const lastHeight = useRef(224)
@@ -105,6 +108,27 @@ export default function DashboardPage() {
       fetchProjects()
     }
   }, [isLoaded, isSignedIn, fetchProjects])
+
+  // Ctrl/Cmd + K to open search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault()
+        setSearchOpen((prev) => !prev)
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [])
+
+  // Flat list of all files for search
+  const searchFiles = useMemo(
+    () =>
+      projects.flatMap((p) =>
+        p.files.map((f) => ({ id: f.id, name: f.name, projectName: p.name }))
+      ),
+    [projects]
+  )
 
   // Fetch file data when selected
   const fetchFileData = useCallback(async (fileId: string, page = 1, versionId?: string | null, soft = false) => {
@@ -246,6 +270,14 @@ export default function DashboardPage() {
       <div className="flex flex-1 flex-col min-w-0">
         {/* Top Bar */}
         <div className="flex h-12 items-center justify-end gap-3 border-b border-border px-4 shrink-0">
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <Search className="h-3 w-3" />
+            <span>Search</span>
+            <kbd className="ml-2 text-[10px] font-mono bg-background rounded px-1 py-0 border border-border">⌘K</kbd>
+          </button>
           <ThemeToggle />
           <UserButton
             appearance={{
@@ -473,7 +505,7 @@ export default function DashboardPage() {
 
           {/* Resize Handle */}
           <div
-            className="shrink-0 flex items-center justify-center py-1 group cursor-row-resize select-none"
+            className="shrink-0 flex items-center justify-center py-0.5 group cursor-row-resize select-none"
             onMouseDown={(e) => {
               e.preventDefault()
               isDragging.current = true
@@ -537,6 +569,17 @@ export default function DashboardPage() {
         preselectedProjectId={uploadProjectId}
         onUploadComplete={fetchProjects}
         onCreateProject={handleCreateProject}
+      />
+
+      {/* Search Modal */}
+      <SearchModal
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        files={searchFiles}
+        onSelect={(fileId) => {
+          setSelectedFileId(fileId)
+          fetchFileData(fileId)
+        }}
       />
     </div>
   )

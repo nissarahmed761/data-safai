@@ -133,25 +133,23 @@ export default function VersionPanel({
   const latestChange = latestVersion?.changeDescription
 
   return (
-    <div className="mb-1.5 shrink-0">
-      {/* Recent change */}
-      {latestChange && (
-        <div className="flex items-center gap-1.5 mb-1.5 text-[10px] text-muted-foreground">
-          {latestVersion?.changedBy === "ai" ? (
-            <Bot className="h-3 w-3 text-primary/60 shrink-0" />
-          ) : (
-            <User className="h-3 w-3 text-muted-foreground/60 shrink-0" />
-          )}
-          <span className="truncate">{latestChange}</span>
-        </div>
-      )}
+    <div className="mb-1 shrink-0">
+      {/* Single row: change desc + version pills + actions */}
+      <div className="flex items-center gap-2 pb-1.5 border-b border-border/30">
+        {/* Change description (left, truncates) */}
+        {latestChange && (
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground min-w-0 shrink truncate">
+            {latestVersion?.changedBy === "ai" ? (
+              <Bot className="h-3 w-3 text-primary/60 shrink-0" />
+            ) : (
+              <User className="h-3 w-3 text-muted-foreground/60 shrink-0" />
+            )}
+            <span className="truncate">{latestChange}</span>
+          </div>
+        )}
 
-      {/* Version bar */}
-      <div className="flex items-center gap-2 pb-2 border-b border-border/30">
-        <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground shrink-0">
-          <History className="h-3 w-3" />
-          <span>{sorted.length} versions</span>
-        </div>
+        {/* Separator */}
+        {latestChange && <div className="h-3 w-px bg-border/50 shrink-0" />}
 
         {/* Compact version pills */}
         <div className="flex items-center gap-1 overflow-x-auto flex-1 min-w-0">
