@@ -246,6 +246,7 @@ export default function AIPanel({
               <div className="space-y-2">
                 {msg.parts.map((part, i) => {
                   if (part.type === "text") {
+                    if (!part.text) return null
                     return (
                       <div key={`${msg.id}-${i}`} className="flex gap-2">
                         <span className="shrink-0 font-bold font-mono text-primary">
