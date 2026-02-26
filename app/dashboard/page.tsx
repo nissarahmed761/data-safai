@@ -200,6 +200,27 @@ export default function DashboardPage() {
           setUploadProjectId(projectId)
           setUploadModalOpen(true)
         }}
+        onImportFolder={async (folderName, files) => {
+          // 1. Create project with folder name
+          const res = await fetch("/api/projects", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: folderName }),
+          })
+          if (!res.ok) return
+          const project = await res.json()
+
+          // 2. Upload all supported files to the new project
+          const formData = new FormData()
+          files.forEach((f) => formData.append("files", f))
+          await fetch(`/api/projects/${project.id}/files`, {
+            method: "POST",
+            body: formData,
+          })
+
+          // 3. Refresh
+          await fetchProjects()
+        }}
       />
 
       {/* Main Area */}

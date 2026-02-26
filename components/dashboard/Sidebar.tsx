@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import {
   ChevronDown,
@@ -9,6 +9,7 @@ import {
   PanelLeftOpen,
   FileSpreadsheet,
   FolderOpen,
+  FolderInput,
   Sparkles,
   Plus,
   Trash2,
@@ -46,6 +47,7 @@ interface SidebarProps {
   onCreateProject: (name: string) => Promise<void>
   onDeleteProject: (projectId: string) => Promise<void>
   onAddFile: (projectId: string) => void
+  onImportFolder: (name: string, files: File[]) => void
 }
 
 export default function Sidebar({
@@ -58,7 +60,9 @@ export default function Sidebar({
   onCreateProject,
   onDeleteProject,
   onAddFile,
+  onImportFolder,
 }: SidebarProps) {
+  const folderInputRef = useRef<HTMLInputElement>(null)
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(
     new Set()
   )
@@ -132,11 +136,40 @@ export default function Sidebar({
           {/* New project button */}
           <button
             onClick={() => setIsCreating(true)}
-            className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 transition-colors mb-1"
+            className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
           >
             <Plus className="h-3.5 w-3.5 shrink-0" />
             <span>New Project</span>
           </button>
+          <button
+            onClick={() => folderInputRef.current?.click()}
+            className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors mb-1"
+          >
+            <FolderInput className="h-3.5 w-3.5 shrink-0" />
+            <span>Import Folder</span>
+          </button>
+          <input
+            ref={folderInputRef}
+            type="file"
+            className="hidden"
+            {...({ webkitdirectory: "", directory: "", mozdirectory: "" } as React.InputHTMLAttributes<HTMLInputElement>)}
+            onChange={(e) => {
+              const fileList = e.target.files
+              if (!fileList || fileList.length === 0) return
+              // Derive project name from folder path
+              const firstPath = fileList[0].webkitRelativePath || ""
+              const folderName = firstPath.split("/")[0] || "Imported Folder"
+              // Filter to supported extensions
+              const supported = Array.from(fileList).filter((f) => {
+                const ext = f.name.split(".").pop()?.toLowerCase()
+                return ["csv", "json", "tsv", "xlsx", "xls"].includes(ext ?? "")
+              })
+              if (supported.length > 0) {
+                onImportFolder(folderName, supported)
+              }
+              e.target.value = ""
+            }}
+          />
 
           {/* Inline create form */}
           {isCreating && (
@@ -234,8 +267,8 @@ export default function Sidebar({
                       onClick={() => onAddFile(project.id)}
                       className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground/60 hover:text-primary hover:bg-primary/5 transition-colors"
                     >
-                      <Upload className="h-3 w-3 shrink-0" />
-                      <span>Add file</span>
+                      <Plus className="h-3 w-3 shrink-0" />
+                      <span>Add Files</span>
                     </button>
                   </div>
                 )}
