@@ -13,6 +13,7 @@ import {
   ChevronDown,
 } from "lucide-react"
 import { SUPPORTED_EXTENSIONS, FILE_ACCEPT, isSupportedExt } from "@/lib/parsers"
+import Select from "@/components/ui/Select"
 import type { Project } from "./Sidebar"
 
 interface UploadModalProps {
@@ -195,22 +196,14 @@ export default function UploadModal({
           </label>
           {!showNewProject ? (
             <div className="flex gap-2">
-              <div className="relative flex-1">
-                <select
-                  value={selectedProjectId}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
-                  className="w-full appearance-none rounded-lg border border-border bg-background px-3 py-2 pr-8 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  disabled={isUploading}
-                >
-                  <option value="">Select a project...</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-              </div>
+              <Select
+                value={selectedProjectId}
+                onChange={setSelectedProjectId}
+                options={projects.map((p) => ({ value: p.id, label: p.name }))}
+                placeholder="Select a project..."
+                disabled={isUploading}
+                className="flex-1"
+              />
               <button
                 onClick={() => setShowNewProject(true)}
                 className="shrink-0 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"

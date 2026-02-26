@@ -14,6 +14,7 @@ import {
   Sparkles,
   AtSign,
 } from "lucide-react"
+import Listbox, { useListboxKeyboard, type ListboxItem } from "@/components/ui/Listbox"
 
 export interface ProjectFile {
   id: string
@@ -39,6 +40,7 @@ export default function AIPanel({
   const [taggedFiles, setTaggedFiles] = useState<ProjectFile[]>([])
   const [showMentions, setShowMentions] = useState(false)
   const [mentionFilter, setMentionFilter] = useState("")
+  const [mentionHighlight, setMentionHighlight] = useState(0)
   const [contextTokens, setContextTokens] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -99,12 +101,42 @@ export default function AIPanel({
   // Filtered files for @ mention dropdown
   const mentionCandidates = useMemo(() => {
     const taggedIds = new Set(taggedFiles.map((f) => f.id))
-    return projectFiles.filter(
-      (f) =>
-        !taggedIds.has(f.id) &&
-        f.name.toLowerCase().includes(mentionFilter.toLowerCase())
-    )
+    return projectFiles
+      .filter(
+        (f) =>
+          !taggedIds.has(f.id) &&
+          f.name.toLowerCase().includes(mentionFilter.toLowerCase())
+      )
+      .map((f): ListboxItem => ({
+        id: f.id,
+        label: f.name.split("/").pop() || f.name,
+        icon: <AtSign className="h-3 w-3 text-primary shrink-0" />,
+      }))
   }, [projectFiles, taggedFiles, mentionFilter])
+
+  const handleMentionSelect = useCallback(
+    (item: ListboxItem) => {
+      const file = projectFiles.find((f) => f.id === item.id)
+      if (file) {
+        setTaggedFiles((prev) => [...prev, file])
+        const lastAt = input.lastIndexOf("@")
+        const before = lastAt > 0 ? input.slice(0, lastAt) : ""
+        setInput(before)
+        setShowMentions(false)
+        inputRef.current?.focus()
+      }
+    },
+    [input, projectFiles]
+  )
+
+  const mentionKeyDown = useListboxKeyboard(
+    mentionCandidates,
+    mentionHighlight,
+    setMentionHighlight,
+    handleMentionSelect,
+    () => setShowMentions(false),
+    showMentions
+  )
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,19 +157,6 @@ export default function AIPanel({
       setShowMentions(false)
     },
     []
-  )
-
-  const handleTagFile = useCallback(
-    (file: ProjectFile) => {
-      setTaggedFiles((prev) => [...prev, file])
-      // Remove the @filter text from input
-      const lastAt = input.lastIndexOf("@")
-      const before = lastAt > 0 ? input.slice(0, lastAt) : ""
-      setInput(before)
-      setShowMentions(false)
-      inputRef.current?.focus()
-    },
-    [input]
   )
 
   const removeTag = useCallback((fileId: string) => {
@@ -293,17 +312,12 @@ export default function AIPanel({
       <div className="relative shrink-0">
         {/* @ Mention dropdown */}
         {showMentions && mentionCandidates.length > 0 && (
-          <div className="absolute bottom-full left-0 right-0 mx-4 mb-1 rounded-lg border border-border bg-popover shadow-lg max-h-32 overflow-y-auto z-10">
-            {mentionCandidates.slice(0, 8).map((f) => (
-              <button
-                key={f.id}
-                onClick={() => handleTagFile(f)}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-muted transition-colors"
-              >
-                <AtSign className="h-3 w-3 text-primary shrink-0" />
-                <span className="truncate">{f.name.split("/").pop()}</span>
-              </button>
-            ))}
+          <div className="absolute bottom-full left-0 right-0 mx-4 mb-1 z-10">
+            <Listbox
+              items={mentionCandidates}
+              onSelect={handleMentionSelect}
+              onClose={() => setShowMentions(false)}
+            />
           </div>
         )}
 
@@ -317,7 +331,9 @@ export default function AIPanel({
             value={input}
             onChange={handleInputChange}
             onKeyDown={(e) => {
-              if (e.key === "Escape") setShowMentions(false)
+              if (showMentions) {
+                mentionKeyDown(e)
+              }
             }}
             placeholder={
               hasContext
