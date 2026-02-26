@@ -7,7 +7,6 @@ import {
   GitCompareArrows,
   User,
   Bot,
-  ChevronDown,
   X,
   Plus,
   Minus,
@@ -61,7 +60,6 @@ export default function VersionPanel({
   onViewVersion,
   onRevert,
 }: VersionPanelProps) {
-  const [expanded, setExpanded] = useState(false)
   const [compareFrom, setCompareFrom] = useState<string | null>(null)
   const [compareTo, setCompareTo] = useState<string | null>(null)
   const [diffData, setDiffData] = useState<DiffData | null>(null)
@@ -123,20 +121,29 @@ export default function VersionPanel({
 
   if (versions.length <= 1) return null
 
+  // Latest change description
+  const latestChange = latestVersion?.changeDescription
+
   return (
     <div className="mb-3 shrink-0">
+      {/* Recent change */}
+      {latestChange && (
+        <div className="flex items-center gap-1.5 mb-1.5 text-[10px] text-muted-foreground">
+          {latestVersion?.changedBy === "ai" ? (
+            <Bot className="h-3 w-3 text-primary/60 shrink-0" />
+          ) : (
+            <User className="h-3 w-3 text-muted-foreground/60 shrink-0" />
+          )}
+          <span className="truncate">{latestChange}</span>
+        </div>
+      )}
+
       {/* Version bar */}
       <div className="flex items-center gap-2 pb-2 border-b border-border/30">
-        <button
-          onClick={() => setExpanded((e) => !e)}
-          className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
-        >
+        <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground shrink-0">
           <History className="h-3 w-3" />
           <span>{sorted.length} versions</span>
-          <ChevronDown
-            className={`h-3 w-3 transition-transform ${expanded ? "rotate-180" : ""}`}
-          />
-        </button>
+        </div>
 
         {/* Compact version pills */}
         <div className="flex items-center gap-1 overflow-x-auto flex-1 min-w-0">
@@ -208,79 +215,6 @@ export default function VersionPanel({
       {compareFrom && !compareTo && (
         <div className="mt-1.5 text-[10px] text-blue-500 animate-pulse">
           Select second version to compare...
-        </div>
-      )}
-
-      {/* Expanded version details */}
-      {expanded && (
-        <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
-          {sorted.map((v) => {
-            const isLatest = v.id === latestVersion?.id
-            const isActive = v.id === activeVersionId
-            const time = new Date(v.createdAt)
-            const timeStr = time.toLocaleString(undefined, {
-              month: "short",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-
-            return (
-              <button
-                key={v.id}
-                onClick={() => handleVersionClick(v.id)}
-                className={`flex w-full items-start gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors ${
-                  isActive
-                    ? "bg-primary/10 border border-primary/20"
-                    : "hover:bg-muted/50 border border-transparent"
-                }`}
-              >
-                <div className="flex flex-col items-center mt-0.5">
-                  <div
-                    className={`h-2 w-2 rounded-full ${
-                      isActive ? "bg-primary" : "bg-muted-foreground/30"
-                    }`}
-                  />
-                  {!isLatest && (
-                    <div className="w-px h-3 bg-border/50 mt-0.5" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`text-[11px] font-semibold ${
-                        isActive ? "text-primary" : "text-foreground"
-                      }`}
-                    >
-                      v{v.versionNumber}
-                    </span>
-                    {isLatest && (
-                      <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0 rounded-full">
-                        latest
-                      </span>
-                    )}
-                    {v.changedBy === "ai" ? (
-                      <Bot className="h-2.5 w-2.5 text-primary/60" />
-                    ) : (
-                      <User className="h-2.5 w-2.5 text-muted-foreground/60" />
-                    )}
-                    <span className="text-[9px] text-muted-foreground ml-auto shrink-0">
-                      {timeStr}
-                    </span>
-                  </div>
-                  {v.changeDescription && (
-                    <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-                      {v.changeDescription}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-2 mt-0.5 text-[9px] text-muted-foreground/60">
-                    <span>{v.rowCount} rows</span>
-                    <span>{v.columnCount} cols</span>
-                  </div>
-                </div>
-              </button>
-            )
-          })}
         </div>
       )}
 
