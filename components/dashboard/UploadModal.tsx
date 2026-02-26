@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import {
   X,
   Upload,
@@ -44,6 +44,16 @@ export default function UploadModal({
   )
   const [files, setFiles] = useState<FileStatus[]>([])
   const [isDragOver, setIsDragOver] = useState(false)
+
+  // Sync preselectedProjectId when modal reopens
+  useEffect(() => {
+    if (open && preselectedProjectId) {
+      setSelectedProjectId(preselectedProjectId)
+    }
+    if (open) {
+      setFiles([])
+    }
+  }, [open, preselectedProjectId])
   const [isUploading, setIsUploading] = useState(false)
   const [showNewProject, setShowNewProject] = useState(false)
   const [newProjectName, setNewProjectName] = useState("")

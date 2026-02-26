@@ -65,6 +65,7 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [projectsLoading, setProjectsLoading] = useState(true)
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
+  const [uploadProjectId, setUploadProjectId] = useState<string | null>(null)
   const [fileData, setFileData] = useState<FileData | null>(null)
   const [fileLoading, setFileLoading] = useState(false)
   const [fileRefreshing, setFileRefreshing] = useState(false)
@@ -195,6 +196,10 @@ export default function DashboardPage() {
         onFileSelect={setSelectedFileId}
         onCreateProject={handleCreateProject}
         onDeleteProject={handleDeleteProject}
+        onAddFile={(projectId) => {
+          setUploadProjectId(projectId)
+          setUploadModalOpen(true)
+        }}
       />
 
       {/* Main Area */}
@@ -517,8 +522,12 @@ export default function DashboardPage() {
       {/* Upload Modal */}
       <UploadModal
         open={uploadModalOpen}
-        onClose={() => setUploadModalOpen(false)}
+        onClose={() => {
+          setUploadModalOpen(false)
+          setUploadProjectId(null)
+        }}
         projects={projects}
+        preselectedProjectId={uploadProjectId}
         onUploadComplete={fetchProjects}
         onCreateProject={handleCreateProject}
       />

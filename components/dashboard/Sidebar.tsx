@@ -13,6 +13,7 @@ import {
   Plus,
   Trash2,
   Loader2,
+  Upload,
 } from "lucide-react"
 
 export interface FileItem {
@@ -44,6 +45,7 @@ interface SidebarProps {
   onFileSelect: (fileId: string) => void
   onCreateProject: (name: string) => Promise<void>
   onDeleteProject: (projectId: string) => Promise<void>
+  onAddFile: (projectId: string) => void
 }
 
 export default function Sidebar({
@@ -55,6 +57,7 @@ export default function Sidebar({
   onFileSelect,
   onCreateProject,
   onDeleteProject,
+  onAddFile,
 }: SidebarProps) {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(
     new Set()
@@ -227,6 +230,13 @@ export default function Sidebar({
                         <span className="truncate">{file.name}</span>
                       </button>
                     ))}
+                    <button
+                      onClick={() => onAddFile(project.id)}
+                      className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground/60 hover:text-primary hover:bg-primary/5 transition-colors"
+                    >
+                      <Upload className="h-3 w-3 shrink-0" />
+                      <span>Add file</span>
+                    </button>
                   </div>
                 )}
               </div>
