@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import Sidebar, { type Project } from "@/components/dashboard/Sidebar"
 import AIPanel from "@/components/dashboard/AIPanel"
+import VersionPanel from "@/components/dashboard/VersionPanel"
 import UploadModal from "@/components/dashboard/UploadModal"
 import ThemeToggle from "@/components/ThemeToggle"
 
@@ -302,56 +303,21 @@ export default function DashboardPage() {
                   </span>
                 </div>
 
-                {/* Version Timeline */}
-                {fileData.versions.length > 1 && (
-                  <div className="flex items-center gap-1 mb-3 pb-2 border-b border-border/30 shrink-0 overflow-x-auto">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-1 shrink-0">Versions</span>
-                    {[...fileData.versions].reverse().map((v, i) => {
-                      const isLatest = i === fileData.versions.length - 1
-                      const isViewing = viewingVersionId
-                        ? v.id === viewingVersionId
-                        : isLatest
-                      return (
-                        <div key={v.id} className="flex items-center gap-1 shrink-0">
-                          {i > 0 && (
-                            <span className="text-muted-foreground/30 text-[10px]">&rarr;</span>
-                          )}
-                          <button
-                            onClick={() => {
-                              if (isLatest) {
-                                setViewingVersionId(null)
-                                fetchFileData(selectedFileId!, 1, null, true)
-                              } else {
-                                handleViewVersion(v.id)
-                              }
-                            }}
-                            className={`group relative flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
-                              isViewing
-                                ? "bg-primary/15 text-primary ring-1 ring-primary/30"
-                                : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                            }`}
-                            title={v.changeDescription || `Version ${v.versionNumber}`}
-                          >
-                            v{v.versionNumber}
-                            {isLatest && (
-                              <span className="text-[8px] opacity-60">latest</span>
-                            )}
-                          </button>
-                        </div>
-                      )
-                    })}
-                    {/* Revert button when viewing old version */}
-                    {viewingVersionId && (
-                      <button
-                        onClick={() => handleRevert(viewingVersionId)}
-                        className="ml-2 flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/20 transition-colors shrink-0"
-                      >
-                        <RotateCcw className="h-2.5 w-2.5" />
-                        Revert to this version
-                      </button>
-                    )}
-                  </div>
-                )}
+                {/* Version Panel */}
+                <VersionPanel
+                  fileId={fileData.id}
+                  versions={fileData.versions}
+                  viewingVersionId={viewingVersionId}
+                  onViewVersion={(vId) => {
+                    if (vId) {
+                      handleViewVersion(vId)
+                    } else {
+                      setViewingVersionId(null)
+                      fetchFileData(selectedFileId!, 1, null, true)
+                    }
+                  }}
+                  onRevert={handleRevert}
+                />
 
                 {/* Table */}
                 <div className="flex-1 min-h-0 overflow-auto rounded-lg border border-border">
