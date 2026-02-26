@@ -18,12 +18,7 @@ export async function POST(req: Request) {
 
   const { messages, projectId, fileId, taggedFileIds } = await req.json()
 
-  if (!projectId && !fileId) {
-    return NextResponse.json(
-      { error: "projectId or fileId is required. Select a file to chat about." },
-      { status: 400 }
-    )
-  }
+  // No project/file context is okay — agent can still answer general questions
 
   // Load project-wide context (lightweight metadata for all files)
   const projectCtx = projectId
@@ -44,13 +39,6 @@ export async function POST(req: Request) {
   const focusedFiles = focusedFilesRaw.filter(
     (f): f is NonNullable<typeof f> => f !== null
   )
-
-  if (focusedFiles.length === 0 && !projectCtx) {
-    return NextResponse.json(
-      { error: "No file context could be loaded." },
-      { status: 404 }
-    )
-  }
 
   // Use the active file's context for tools (first focused file or fileId)
   const activeFileCtx = focusedFiles.find((f) => f!.fileId === fileId) ?? focusedFiles[0]

@@ -165,7 +165,7 @@ export default function AIPanel({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || isLoading || !hasContext) return
+    if (!input.trim() || isLoading) return
     // Include tagged file names in the message for clarity
     const tagPrefix = taggedFiles.length > 0
       ? taggedFiles.map((f) => `@${f.name}`).join(" ") + " "
@@ -223,7 +223,7 @@ export default function AIPanel({
             <p className="text-xs text-muted-foreground">
               {hasContext
                 ? "Ask me to analyze, clean, or transform your data. Use @ to tag files."
-                : "Select a file to start using the AI agent."}
+                : "Ask me anything. Select a file or use @ to give me data context."}
             </p>
           </div>
         )}
@@ -335,17 +335,13 @@ export default function AIPanel({
                 mentionKeyDown(e)
               }
             }}
-            placeholder={
-              hasContext
-                ? "Ask AI... (type @ to tag files)"
-                : "Select a file first..."
-            }
+            placeholder="Ask AI... (type @ to tag files)"
             className="flex-1 bg-transparent text-sm font-mono text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
-            disabled={isLoading || !hasContext}
+            disabled={isLoading}
           />
           <button
             type="submit"
-            disabled={isLoading || !input.trim() || !hasContext}
+            disabled={isLoading || !input.trim()}
             className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <Send className="h-3.5 w-3.5" />
