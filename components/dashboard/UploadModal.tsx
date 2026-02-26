@@ -258,11 +258,12 @@ export default function UploadModal({
 
         {/* Drop zone */}
         <div
-          className={`relative rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
+          className={`relative rounded-xl border-2 border-dashed p-8 text-center transition-colors cursor-pointer ${
             isDragOver
               ? "border-primary bg-primary/5"
-              : "border-border/60 bg-muted/20"
+              : "border-border/60 bg-muted/20 hover:border-primary/40 hover:bg-primary/5"
           }`}
+          onClick={() => !isUploading && fileInputRef.current?.click()}
           onDragOver={(e) => {
             e.preventDefault()
             setIsDragOver(true)
@@ -284,13 +285,9 @@ export default function UploadModal({
           <Upload className="mx-auto h-8 w-8 text-muted-foreground/60 mb-3" />
           <p className="text-sm text-muted-foreground mb-1">
             Drag & drop files here, or{" "}
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="text-primary font-medium hover:underline"
-              disabled={isUploading}
-            >
+            <span className="text-primary font-medium">
               browse
-            </button>
+            </span>
           </p>
           <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground/60">
             <span className="flex items-center gap-1">
