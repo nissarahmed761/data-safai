@@ -133,7 +133,7 @@ export default function VersionPanel({
   const latestChange = latestVersion?.changeDescription
 
   return (
-    <div className="mb-3 shrink-0">
+    <div className="mb-1.5 shrink-0">
       {/* Recent change */}
       {latestChange && (
         <div className="flex items-center gap-1.5 mb-1.5 text-[10px] text-muted-foreground">

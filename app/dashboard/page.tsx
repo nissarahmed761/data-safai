@@ -259,11 +259,11 @@ export default function DashboardPage() {
         {/* Content + AI Panel */}
         <div
           ref={containerRef}
-          className="flex flex-1 flex-col p-4 min-h-0 overflow-hidden"
+          className="flex flex-1 flex-col p-2 min-h-0 overflow-hidden"
           onMouseMove={(e) => {
             if (!isDragging.current || !containerRef.current) return
             const containerRect = containerRef.current.getBoundingClientRect()
-            const newHeight = containerRect.bottom - e.clientY - 16 // 16px for padding
+            const newHeight = containerRect.bottom - e.clientY - 8 // 8px for padding
             const clamped = Math.max(48, Math.min(newHeight, containerRect.height - 120))
             setAiPanelHeight(clamped)
             lastHeight.current = clamped
@@ -280,30 +280,30 @@ export default function DashboardPage() {
               </div>
             ) : fileData ? (
               /* Real File Viewer */
-              <div className="h-full rounded-xl border border-border bg-card/50 p-6 flex flex-col">
-                {/* File header */}
-                <div className="flex items-center gap-2 mb-2 pb-3 border-b border-border/50 shrink-0">
-                  <FileSpreadsheet className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">
+              <div className="h-full rounded-xl border border-border bg-card/50 p-3 flex flex-col">
+                {/* Row 1: File info */}
+                <div className="flex items-center gap-2 mb-1 shrink-0">
+                  <FileSpreadsheet className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-xs font-semibold text-foreground">
                     {fileData.name.split("/").pop()}
                   </span>
-                  <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0 rounded-full">
                     {fileData.name.endsWith(".json") ? "JSON" : fileData.name.endsWith(".xlsx") || fileData.name.endsWith(".xls") ? "XLSX" : fileData.name.endsWith(".tsv") ? "TSV" : "CSV"}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-[10px] text-muted-foreground">
                     {fileData.currentVersion.rowCount} rows &middot;{" "}
                     {fileData.currentVersion.columnCount} cols
                   </span>
                   {fileRefreshing && (
                     <RefreshCw className="h-3 w-3 animate-spin text-primary ml-1" />
                   )}
-                  <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+                  <span className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground">
                     <History className="h-3 w-3" />
                     v{fileData.currentVersion.versionNumber}
                   </span>
                 </div>
 
-                {/* Version Panel */}
+                {/* Row 2: Version Panel (pills + diff + revert) */}
                 <VersionPanel
                   fileId={fileData.id}
                   versions={fileData.versions}
@@ -321,21 +321,19 @@ export default function DashboardPage() {
 
                 {/* Table */}
                 <div className="flex-1 min-h-0 overflow-auto rounded-lg border border-border">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-xs">
                     <thead className="sticky top-0 bg-muted/60 backdrop-blur-sm">
                       <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border w-12">
+                        <th className="px-2 py-1.5 text-left text-[10px] font-medium text-muted-foreground border-b border-border w-10">
                           #
                         </th>
                         {fileData.currentVersion.columns.map((col) => (
                           <th
                             key={col.name}
-                            className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border"
+                            className="px-2 py-1.5 text-left text-[10px] font-medium text-muted-foreground border-b border-border"
+                            title={`${col.name} (${col.type})`}
                           >
-                            <span>{col.name}</span>
-                            <span className="ml-1 text-[10px] text-muted-foreground/50 lowercase">
-                              {col.type}
-                            </span>
+                            {col.name}
                           </th>
                         ))}
                       </tr>
@@ -346,13 +344,13 @@ export default function DashboardPage() {
                           key={i}
                           className="hover:bg-muted/30 transition-colors"
                         >
-                          <td className="px-3 py-2 text-xs text-muted-foreground tabular-nums">
+                          <td className="px-2 py-1 text-[10px] text-muted-foreground tabular-nums">
                             {(currentPage - 1) * 50 + i + 1}
                           </td>
                           {fileData.currentVersion.columns.map((col) => (
                             <td
                               key={col.name}
-                              className="px-3 py-2 text-foreground max-w-[200px] truncate"
+                              className="px-2 py-1 text-foreground max-w-[200px] truncate"
                             >
                               {row[col.name] === null ||
                               row[col.name] === undefined ||
@@ -372,7 +370,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Pagination */}
-                <div className="flex items-center justify-between pt-3 shrink-0">
+                <div className="flex items-center justify-between pt-1.5 shrink-0">
                   <p className="text-xs text-muted-foreground">
                     Showing{" "}
                     {Math.min(
