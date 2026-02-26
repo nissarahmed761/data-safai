@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { useUser, UserButton } from "@clerk/nextjs"
 import { redirect } from "next/navigation"
 import {
@@ -76,6 +76,12 @@ export default function DashboardPage() {
   const isDragging = useRef(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const lastHeight = useRef(224)
+
+  // Derive the current project from the selected file
+  const currentProject = useMemo(() => {
+    if (!selectedFileId) return null
+    return projects.find((p) => p.files.some((f) => f.id === selectedFileId)) ?? null
+  }, [selectedFileId, projects])
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -538,6 +544,10 @@ export default function DashboardPage() {
           >
             <AIPanel
               fileId={selectedFileId}
+              projectId={currentProject?.id ?? null}
+              projectFiles={
+                currentProject?.files.map((f) => ({ id: f.id, name: f.name })) ?? []
+              }
               onFileChanged={() => {
                 if (selectedFileId) {
                   setViewingVersionId(null)
