@@ -243,7 +243,7 @@ export default function DashboardPage() {
                     {fileData.name}
                   </span>
                   <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                    {fileData.name.endsWith(".json") ? "JSON" : "CSV"}
+                    {fileData.name.endsWith(".json") ? "JSON" : fileData.name.endsWith(".xlsx") || fileData.name.endsWith(".xls") ? "XLSX" : fileData.name.endsWith(".tsv") ? "TSV" : "CSV"}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {fileData.currentVersion.rowCount} rows &middot;{" "}
@@ -448,6 +448,14 @@ export default function DashboardPage() {
                     <span className="flex items-center gap-1">
                       <FileJson className="h-3 w-3" />
                       .json
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <FileSpreadsheet className="h-3 w-3" />
+                      .xlsx
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <FileSpreadsheet className="h-3 w-3" />
+                      .tsv
                     </span>
                   </div>
                 </div>

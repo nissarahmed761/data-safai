@@ -4,7 +4,7 @@ import { dataFiles, fileVersions, projects } from "@/lib/db/schema"
 import { eq, and } from "drizzle-orm"
 import { getDbUser } from "@/lib/auth"
 import { downloadFromR2 } from "@/lib/r2"
-import Papa from "papaparse"
+import { parseFileContent } from "@/lib/parsers"
 
 // GET /api/files/:fileId — get file metadata + parsed data from current version
 export async function GET(
@@ -57,26 +57,11 @@ export async function GET(
   if (includeData) {
     try {
       const content = await downloadFromR2(currentVersion.storagePath)
-      const ext = file.name.split(".").pop()?.toLowerCase()
-
-      if (ext === "csv" || file.mimeType === "text/csv") {
-        const parsed = Papa.parse(content, {
-          header: true,
-          skipEmptyLines: true,
-        })
-        totalRows = parsed.data.length
-        const start = (page - 1) * pageSize
-        rows = (parsed.data as Record<string, unknown>[]).slice(
-          start,
-          start + pageSize
-        )
-      } else if (ext === "json") {
-        const jsonData = JSON.parse(content)
-        const allRows = Array.isArray(jsonData) ? jsonData : [jsonData]
-        totalRows = allRows.length
-        const start = (page - 1) * pageSize
-        rows = allRows.slice(start, start + pageSize)
-      }
+      const ext = currentVersion.storagePath.split(".").pop()?.toLowerCase() ?? "csv"
+      const parsed = parseFileContent(content, ext, file.mimeType ?? undefined)
+      totalRows = parsed.rowCount
+      const start = (page - 1) * pageSize
+      rows = parsed.rows.slice(start, start + pageSize)
     } catch (err) {
       console.error("Failed to download/parse file:", err)
       return NextResponse.json(

@@ -2,6 +2,7 @@ import { downloadFromR2 } from "@/lib/r2"
 import { db } from "@/lib/db"
 import { dataFiles, fileVersions } from "@/lib/db/schema"
 import { eq, desc } from "drizzle-orm"
+import { parseFileContent } from "@/lib/parsers"
 import Papa from "papaparse"
 
 export interface FileContext {
@@ -37,17 +38,9 @@ export async function loadFileContext(fileId: string): Promise<FileContext | nul
 
   const version = file.versions[0]
   const content = await downloadFromR2(version.storagePath)
-
-  let allRows: Record<string, unknown>[] = []
-  const ext = file.name.split(".").pop()?.toLowerCase()
-
-  if (ext === "csv" || file.mimeType === "text/csv") {
-    const parsed = Papa.parse(content, { header: true, skipEmptyLines: true })
-    allRows = parsed.data as Record<string, unknown>[]
-  } else if (ext === "json") {
-    const jsonData = JSON.parse(content)
-    allRows = Array.isArray(jsonData) ? jsonData : [jsonData]
-  }
+  const ext = version.storagePath.split(".").pop()?.toLowerCase() ?? "csv"
+  const parsed = parseFileContent(content, ext, file.mimeType ?? undefined)
+  const allRows = parsed.rows
 
   return {
     fileId: file.id,

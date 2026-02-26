@@ -6,11 +6,13 @@ import {
   Upload,
   FileSpreadsheet,
   FileJson,
+  FileText,
   Check,
   AlertCircle,
   Loader2,
   ChevronDown,
 } from "lucide-react"
+import { SUPPORTED_EXTENSIONS, FILE_ACCEPT, isSupportedExt } from "@/lib/parsers"
 import type { Project } from "./Sidebar"
 
 interface UploadModalProps {
@@ -51,7 +53,7 @@ export default function UploadModal({
   const addFiles = useCallback((newFiles: FileList | File[]) => {
     const accepted = Array.from(newFiles).filter((f) => {
       const ext = f.name.split(".").pop()?.toLowerCase()
-      return ext === "csv" || ext === "json"
+      return isSupportedExt(ext)
     })
     setFiles((prev) => [
       ...prev,
@@ -262,7 +264,7 @@ export default function UploadModal({
             ref={fileInputRef}
             type="file"
             multiple
-            accept=".csv,.json"
+            accept={FILE_ACCEPT}
             className="hidden"
             onChange={(e) => {
               if (e.target.files) addFiles(e.target.files)
@@ -289,6 +291,14 @@ export default function UploadModal({
               <FileJson className="h-3 w-3" />
               .json
             </span>
+            <span className="flex items-center gap-1">
+              <FileSpreadsheet className="h-3 w-3" />
+              .xlsx
+            </span>
+            <span className="flex items-center gap-1">
+              <FileText className="h-3 w-3" />
+              .tsv
+            </span>
             <span>up to 50MB</span>
           </div>
         </div>
@@ -301,10 +311,12 @@ export default function UploadModal({
                 key={`${f.file.name}-${i}`}
                 className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/20 px-3 py-2"
               >
-                {f.file.name.endsWith(".csv") ? (
+                {f.file.name.endsWith(".csv") || f.file.name.endsWith(".tsv") ? (
                   <FileSpreadsheet className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                ) : (
+                ) : f.file.name.endsWith(".json") ? (
                   <FileJson className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                ) : (
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 )}
                 <span className="flex-1 text-sm text-foreground truncate">
                   {f.file.name}
