@@ -8,9 +8,6 @@ import {
   User,
   Bot,
   X,
-  Plus,
-  Minus,
-  Pencil,
   Loader2,
 } from "lucide-react"
 
@@ -31,10 +28,12 @@ interface DiffSummary {
   totalCellChanges: number
 }
 
-interface DiffChange {
-  type: "modified" | "added" | "removed"
+interface DiffLine {
+  type: "modified" | "added" | "removed" | "context"
   rowIndex: number
-  cells: { column: string; from: string | null; to: string | null }[]
+  fromRow: Record<string, string | null> | null
+  toRow: Record<string, string | null> | null
+  changedCols: string[]
 }
 
 interface DiffData {
@@ -42,7 +41,7 @@ interface DiffData {
   to: { versionNumber: number; rowCount: number; columnCount: number }
   columns: string[]
   summary: DiffSummary
-  changes: DiffChange[]
+  lines: DiffLine[]
 }
 
 interface VersionPanelProps {
@@ -236,33 +235,24 @@ export default function VersionPanel({
         </div>
       )}
 
-      {/* Diff viewer */}
+      {/* Git-style diff viewer */}
       {showDiff && diffData && (
-        <div className="mt-2 rounded-lg border border-blue-500/20 bg-blue-500/5 overflow-hidden">
+        <div className="mt-2 rounded-lg border border-border/50 overflow-hidden">
           {/* Diff header */}
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-blue-500/10">
-            <GitCompareArrows className="h-3.5 w-3.5 text-blue-500" />
-            <span className="text-xs font-medium text-blue-500">
+          <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border/50">
+            <GitCompareArrows className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs font-medium text-foreground">
               v{diffData.from.versionNumber} → v{diffData.to.versionNumber}
             </span>
-            <div className="flex items-center gap-2 ml-2 text-[10px]">
+            <div className="flex items-center gap-3 ml-2 text-[10px] font-mono">
               {diffData.summary.modified > 0 && (
-                <span className="flex items-center gap-0.5 text-yellow-500">
-                  <Pencil className="h-2.5 w-2.5" />
-                  {diffData.summary.modified} modified
-                </span>
+                <span className="text-yellow-500">~{diffData.summary.modified}</span>
               )}
               {diffData.summary.added > 0 && (
-                <span className="flex items-center gap-0.5 text-green-500">
-                  <Plus className="h-2.5 w-2.5" />
-                  {diffData.summary.added} added
-                </span>
+                <span className="text-green-500">+{diffData.summary.added}</span>
               )}
               {diffData.summary.removed > 0 && (
-                <span className="flex items-center gap-0.5 text-red-500">
-                  <Minus className="h-2.5 w-2.5" />
-                  {diffData.summary.removed} removed
-                </span>
+                <span className="text-red-500">-{diffData.summary.removed}</span>
               )}
             </div>
             <button
@@ -273,90 +263,119 @@ export default function VersionPanel({
             </button>
           </div>
 
-          {/* Diff table */}
-          <div className="max-h-64 overflow-auto">
-            {diffData.changes.length === 0 ? (
-              <div className="px-3 py-4 text-xs text-muted-foreground text-center">
+          {/* Diff body */}
+          <div className="max-h-72 overflow-auto font-mono text-[11px] leading-5">
+            {diffData.lines.length === 0 ? (
+              <div className="px-3 py-4 text-xs text-muted-foreground text-center font-sans">
                 No differences found
               </div>
             ) : (
-              <table className="w-full text-[11px]">
-                <thead className="sticky top-0 bg-blue-500/5 backdrop-blur-sm">
-                  <tr>
-                    <th className="text-left px-2 py-1 text-muted-foreground font-medium w-8">
-                      #
-                    </th>
-                    <th className="text-left px-2 py-1 text-muted-foreground font-medium w-12">
-                      Type
-                    </th>
-                    <th className="text-left px-2 py-1 text-muted-foreground font-medium">
-                      Column
-                    </th>
-                    <th className="text-left px-2 py-1 text-muted-foreground font-medium">
-                      Before
-                    </th>
-                    <th className="text-left px-2 py-1 text-muted-foreground font-medium">
-                      After
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {diffData.changes.flatMap((change) =>
-                    change.cells.map((cell, ci) => (
-                      <tr
-                        key={`${change.rowIndex}-${ci}`}
-                        className={`border-t border-border/20 ${
-                          change.type === "added"
-                            ? "bg-green-500/5"
-                            : change.type === "removed"
-                              ? "bg-red-500/5"
-                              : ""
-                        }`}
-                      >
-                        {ci === 0 ? (
-                          <td
-                            className="px-2 py-1 text-muted-foreground font-mono"
-                            rowSpan={change.cells.length}
-                          >
-                            {change.rowIndex + 1}
-                          </td>
-                        ) : null}
-                        {ci === 0 ? (
-                          <td rowSpan={change.cells.length} className="px-2 py-1">
-                            <span
-                              className={`inline-flex items-center gap-0.5 text-[9px] font-medium rounded px-1 py-0 ${
-                                change.type === "modified"
-                                  ? "bg-yellow-500/10 text-yellow-600"
-                                  : change.type === "added"
-                                    ? "bg-green-500/10 text-green-600"
-                                    : "bg-red-500/10 text-red-600"
-                              }`}
-                            >
-                              {change.type === "modified" ? (
-                                <Pencil className="h-2 w-2" />
-                              ) : change.type === "added" ? (
-                                <Plus className="h-2 w-2" />
-                              ) : (
-                                <Minus className="h-2 w-2" />
-                              )}
-                              {change.type}
+              diffData.lines.map((line, li) => {
+                const changedSet = new Set(line.changedCols)
+
+                if (line.type === "modified") {
+                  return (
+                    <div key={`m-${line.rowIndex}`}>
+                      {/* Old row (red) */}
+                      <div className="flex bg-red-500/8 border-b border-red-500/10">
+                        <span className="shrink-0 w-10 px-2 text-right text-red-400/60 select-none border-r border-red-500/10">
+                          {line.rowIndex + 1}
+                        </span>
+                        <span className="shrink-0 w-5 text-center text-red-400 select-none">−</span>
+                        <div className="flex-1 px-1 overflow-x-auto whitespace-nowrap">
+                          {diffData.columns.map((col, ci) => {
+                            const val = line.fromRow?.[col]
+                            const isChanged = changedSet.has(col)
+                            return (
+                              <span key={ci}>
+                                {ci > 0 && <span className="text-muted-foreground/20 mx-1">│</span>}
+                                <span className="text-red-400/50 text-[9px]">{col}:</span>
+                                <span className={isChanged ? "bg-red-500/20 text-red-300 rounded px-0.5" : "text-red-400/70"}>
+                                  {val ?? <span className="text-muted-foreground/30 italic">null</span>}
+                                </span>
+                              </span>
+                            )
+                          })}
+                        </div>
+                      </div>
+                      {/* New row (green) */}
+                      <div className="flex bg-green-500/8 border-b border-green-500/10">
+                        <span className="shrink-0 w-10 px-2 text-right text-green-400/60 select-none border-r border-green-500/10">
+                          {line.rowIndex + 1}
+                        </span>
+                        <span className="shrink-0 w-5 text-center text-green-400 select-none">+</span>
+                        <div className="flex-1 px-1 overflow-x-auto whitespace-nowrap">
+                          {diffData.columns.map((col, ci) => {
+                            const val = line.toRow?.[col]
+                            const isChanged = changedSet.has(col)
+                            return (
+                              <span key={ci}>
+                                {ci > 0 && <span className="text-muted-foreground/20 mx-1">│</span>}
+                                <span className="text-green-400/50 text-[9px]">{col}:</span>
+                                <span className={isChanged ? "bg-green-500/20 text-green-300 rounded px-0.5" : "text-green-400/70"}>
+                                  {val ?? <span className="text-muted-foreground/30 italic">null</span>}
+                                </span>
+                              </span>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }
+
+                if (line.type === "removed") {
+                  return (
+                    <div key={`r-${line.rowIndex}`} className="flex bg-red-500/8 border-b border-red-500/10">
+                      <span className="shrink-0 w-10 px-2 text-right text-red-400/60 select-none border-r border-red-500/10">
+                        {line.rowIndex + 1}
+                      </span>
+                      <span className="shrink-0 w-5 text-center text-red-400 select-none">−</span>
+                      <div className="flex-1 px-1 overflow-x-auto whitespace-nowrap">
+                        {diffData.columns.map((col, ci) => {
+                          const val = line.fromRow?.[col]
+                          return (
+                            <span key={ci}>
+                              {ci > 0 && <span className="text-muted-foreground/20 mx-1">│</span>}
+                              <span className="text-red-400/50 text-[9px]">{col}:</span>
+                              <span className="text-red-400/70">
+                                {val ?? <span className="text-muted-foreground/30 italic">null</span>}
+                              </span>
                             </span>
-                          </td>
-                        ) : null}
-                        <td className="px-2 py-1 font-mono text-foreground">
-                          {cell.column}
-                        </td>
-                        <td className="px-2 py-1 font-mono text-red-400 line-through">
-                          {cell.from ?? <span className="text-muted-foreground/30 no-underline">null</span>}
-                        </td>
-                        <td className="px-2 py-1 font-mono text-green-500">
-                          {cell.to ?? <span className="text-muted-foreground/30">null</span>}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                }
+
+                if (line.type === "added") {
+                  return (
+                    <div key={`a-${line.rowIndex}`} className="flex bg-green-500/8 border-b border-green-500/10">
+                      <span className="shrink-0 w-10 px-2 text-right text-green-400/60 select-none border-r border-green-500/10">
+                        {line.rowIndex + 1}
+                      </span>
+                      <span className="shrink-0 w-5 text-center text-green-400 select-none">+</span>
+                      <div className="flex-1 px-1 overflow-x-auto whitespace-nowrap">
+                        {diffData.columns.map((col, ci) => {
+                          const val = line.toRow?.[col]
+                          return (
+                            <span key={ci}>
+                              {ci > 0 && <span className="text-muted-foreground/20 mx-1">│</span>}
+                              <span className="text-green-400/50 text-[9px]">{col}:</span>
+                              <span className="text-green-400/70">
+                                {val ?? <span className="text-muted-foreground/30 italic">null</span>}
+                              </span>
+                            </span>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                }
+
+                return null
+              })
             )}
           </div>
         </div>

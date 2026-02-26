@@ -70,53 +70,55 @@ export async function GET(
     ]),
   ]
 
-  const changes: {
-    type: "modified" | "added" | "removed"
+  // Build unified diff lines (git-style)
+  const lines: {
+    type: "modified" | "added" | "removed" | "context"
     rowIndex: number
-    cells: { column: string; from: string | null; to: string | null }[]
+    fromRow: Record<string, string | null> | null
+    toRow: Record<string, string | null> | null
+    changedCols: string[]
   }[] = []
 
   const minLen = Math.min(fromRows.length, toRows.length)
+  let modifiedCount = 0
+  let totalCellChanges = 0
 
   for (let i = 0; i < minLen; i++) {
-    const cellDiffs: { column: string; from: string | null; to: string | null }[] = []
+    const changed: string[] = []
     for (const col of allCols) {
-      const fv = stringify(fromRows[i]?.[col])
-      const tv = stringify(toRows[i]?.[col])
-      if (fv !== tv) {
-        cellDiffs.push({ column: col, from: fv, to: tv })
+      if (stringify(fromRows[i]?.[col]) !== stringify(toRows[i]?.[col])) {
+        changed.push(col)
       }
     }
-    if (cellDiffs.length > 0) {
-      changes.push({ type: "modified", rowIndex: i, cells: cellDiffs })
+    if (changed.length > 0) {
+      modifiedCount++
+      totalCellChanges += changed.length
+      const fromRow: Record<string, string | null> = {}
+      const toRow: Record<string, string | null> = {}
+      for (const col of allCols) {
+        fromRow[col] = stringify(fromRows[i]?.[col])
+        toRow[col] = stringify(toRows[i]?.[col])
+      }
+      lines.push({ type: "modified", rowIndex: i, fromRow, toRow, changedCols: changed })
     }
   }
 
   // Removed rows
   for (let i = minLen; i < fromRows.length; i++) {
-    changes.push({
-      type: "removed",
-      rowIndex: i,
-      cells: allCols.map((col) => ({
-        column: col,
-        from: stringify(fromRows[i]?.[col]),
-        to: null,
-      })),
-    })
+    const fromRow: Record<string, string | null> = {}
+    for (const col of allCols) fromRow[col] = stringify(fromRows[i]?.[col])
+    lines.push({ type: "removed", rowIndex: i, fromRow, toRow: null, changedCols: allCols })
   }
 
   // Added rows
   for (let i = minLen; i < toRows.length; i++) {
-    changes.push({
-      type: "added",
-      rowIndex: i,
-      cells: allCols.map((col) => ({
-        column: col,
-        from: null,
-        to: stringify(toRows[i]?.[col]),
-      })),
-    })
+    const toRow: Record<string, string | null> = {}
+    for (const col of allCols) toRow[col] = stringify(toRows[i]?.[col])
+    lines.push({ type: "added", rowIndex: i, fromRow: null, toRow, changedCols: allCols })
   }
+
+  const addedCount = lines.filter((l) => l.type === "added").length
+  const removedCount = lines.filter((l) => l.type === "removed").length
 
   return NextResponse.json({
     from: {
@@ -131,12 +133,12 @@ export async function GET(
     },
     columns: allCols,
     summary: {
-      modified: changes.filter((c) => c.type === "modified").length,
-      added: changes.filter((c) => c.type === "added").length,
-      removed: changes.filter((c) => c.type === "removed").length,
-      totalCellChanges: changes.reduce((s, c) => s + c.cells.length, 0),
+      modified: modifiedCount,
+      added: addedCount,
+      removed: removedCount,
+      totalCellChanges,
     },
-    changes: changes.slice(0, 200), // Cap at 200 for performance
+    lines: lines.slice(0, 200),
   })
 }
 
