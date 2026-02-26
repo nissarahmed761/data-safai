@@ -79,13 +79,16 @@ export async function POST(
       const r2Key = `${user.id}/${projectId}/${Date.now()}-${storageName}`
       await uploadToR2(r2Key, storageContent, storageMime)
 
+      // Strip folder path prefix (e.g. "folder/sub/file.csv" -> "file.csv")
+      const baseName = file.name.includes("/") ? file.name.split("/").pop()! : file.name
+
       // Create dataFile record
       const [dataFile] = await db
         .insert(dataFiles)
         .values({
           projectId,
-          name: file.name,
-          originalName: file.name,
+          name: baseName,
+          originalName: baseName,
           size: file.size,
           mimeType: file.type || (ext === "csv" ? "text/csv" : "application/json"),
         })

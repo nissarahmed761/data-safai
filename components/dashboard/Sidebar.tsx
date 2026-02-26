@@ -260,7 +260,7 @@ export default function Sidebar({
                         }`}
                       >
                         <FileSpreadsheet className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{file.name}</span>
+                        <span className="truncate">{file.name.split("/").pop()}</span>
                       </button>
                     ))}
                     <button

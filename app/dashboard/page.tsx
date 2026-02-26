@@ -266,7 +266,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-2 mb-2 pb-3 border-b border-border/50 shrink-0">
                   <FileSpreadsheet className="h-4 w-4 text-primary" />
                   <span className="text-sm font-semibold text-foreground">
-                    {fileData.name}
+                    {fileData.name.split("/").pop()}
                   </span>
                   <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
                     {fileData.name.endsWith(".json") ? "JSON" : fileData.name.endsWith(".xlsx") || fileData.name.endsWith(".xls") ? "XLSX" : fileData.name.endsWith(".tsv") ? "TSV" : "CSV"}
