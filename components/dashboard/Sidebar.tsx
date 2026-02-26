@@ -48,6 +48,7 @@ interface SidebarProps {
   onDeleteProject: (projectId: string) => Promise<void>
   onAddFile: (projectId: string) => void
   onImportFolder: (name: string, files: File[]) => void
+  onDeleteFile: (fileId: string) => void
 }
 
 export default function Sidebar({
@@ -61,6 +62,7 @@ export default function Sidebar({
   onDeleteProject,
   onAddFile,
   onImportFolder,
+  onDeleteFile,
 }: SidebarProps) {
   const folderInputRef = useRef<HTMLInputElement>(null)
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(
@@ -250,18 +252,29 @@ export default function Sidebar({
                       </p>
                     )}
                     {project.files.map((file) => (
-                      <button
-                        key={file.id}
-                        onClick={() => onFileSelect(file.id)}
-                        className={`flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-sm transition-colors ${
-                          selectedFileId === file.id
-                            ? "bg-primary/10 text-primary font-medium"
-                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                        }`}
-                      >
-                        <FileSpreadsheet className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{file.name.split("/").pop()}</span>
-                      </button>
+                      <div key={file.id} className="group/file flex items-center">
+                        <button
+                          onClick={() => onFileSelect(file.id)}
+                          className={`flex flex-1 items-center gap-1.5 rounded-md px-2 py-1 text-sm transition-colors min-w-0 ${
+                            selectedFileId === file.id
+                              ? "bg-primary/10 text-primary font-medium"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                          }`}
+                        >
+                          <FileSpreadsheet className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{file.name.split("/").pop()}</span>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onDeleteFile(file.id)
+                          }}
+                          className="hidden group-hover/file:flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          aria-label="Delete file"
+                        >
+                          <Trash2 className="h-2.5 w-2.5" />
+                        </button>
+                      </div>
                     ))}
                     <button
                       onClick={() => onAddFile(project.id)}

@@ -200,6 +200,16 @@ export default function DashboardPage() {
           setUploadProjectId(projectId)
           setUploadModalOpen(true)
         }}
+        onDeleteFile={async (fileId) => {
+          const res = await fetch(`/api/files/${fileId}`, { method: "DELETE" })
+          if (res.ok) {
+            if (selectedFileId === fileId) {
+              setSelectedFileId(null)
+              setFileData(null)
+            }
+            await fetchProjects()
+          }
+        }}
         onImportFolder={async (folderName, files) => {
           // 1. Create project with folder name
           const res = await fetch("/api/projects", {
