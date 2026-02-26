@@ -77,10 +77,12 @@ export default function DashboardPage() {
   const containerRef = useRef<HTMLDivElement>(null)
   const lastHeight = useRef(224)
 
-  // Derive the current project from the selected file
+  // Derive the current project: from selected file, or fall back to first project
   const currentProject = useMemo(() => {
-    if (!selectedFileId) return null
-    return projects.find((p) => p.files.some((f) => f.id === selectedFileId)) ?? null
+    if (selectedFileId) {
+      return projects.find((p) => p.files.some((f) => f.id === selectedFileId)) ?? projects[0] ?? null
+    }
+    return projects[0] ?? null
   }, [selectedFileId, projects])
 
   const fetchProjects = useCallback(async () => {
