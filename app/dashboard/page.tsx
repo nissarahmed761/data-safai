@@ -15,6 +15,8 @@ import {
   History,
   PanelBottomClose,
   PanelBottomOpen,
+  RotateCcw,
+  RefreshCw,
 } from "lucide-react"
 import Sidebar, { type Project } from "@/components/dashboard/Sidebar"
 import AIPanel from "@/components/dashboard/AIPanel"
@@ -65,7 +67,9 @@ export default function DashboardPage() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [fileData, setFileData] = useState<FileData | null>(null)
   const [fileLoading, setFileLoading] = useState(false)
+  const [fileRefreshing, setFileRefreshing] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+  const [viewingVersionId, setViewingVersionId] = useState<string | null>(null)
   const [aiPanelHeight, setAiPanelHeight] = useState(224) // default h-56 = 224px
   const [aiPanelCollapsed, setAiPanelCollapsed] = useState(false)
   const isDragging = useRef(false)
@@ -93,10 +97,12 @@ export default function DashboardPage() {
   }, [isLoaded, isSignedIn, fetchProjects])
 
   // Fetch file data when selected
-  const fetchFileData = useCallback(async (fileId: string, page = 1) => {
-    setFileLoading(true)
+  const fetchFileData = useCallback(async (fileId: string, page = 1, versionId?: string | null, soft = false) => {
+    if (!soft) setFileLoading(true)
+    else setFileRefreshing(true)
     try {
-      const res = await fetch(`/api/files/${fileId}?page=${page}&pageSize=50`)
+      const vParam = versionId ? `&versionId=${versionId}` : ""
+      const res = await fetch(`/api/files/${fileId}?page=${page}&pageSize=50${vParam}`)
       if (res.ok) {
         const data = await res.json()
         setFileData(data)
@@ -106,16 +112,42 @@ export default function DashboardPage() {
       console.error("Failed to fetch file:", err)
     } finally {
       setFileLoading(false)
+      setFileRefreshing(false)
     }
   }, [])
 
   useEffect(() => {
     if (selectedFileId) {
+      setViewingVersionId(null)
       fetchFileData(selectedFileId, 1)
     } else {
       setFileData(null)
     }
   }, [selectedFileId, fetchFileData])
+
+  const handleViewVersion = useCallback((versionId: string) => {
+    if (!selectedFileId) return
+    setViewingVersionId(versionId)
+    fetchFileData(selectedFileId, 1, versionId)
+  }, [selectedFileId, fetchFileData])
+
+  const handleRevert = useCallback(async (versionId: string) => {
+    if (!selectedFileId) return
+    try {
+      const res = await fetch(`/api/files/${selectedFileId}/revert`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ versionId }),
+      })
+      if (res.ok) {
+        setViewingVersionId(null)
+        await fetchFileData(selectedFileId, 1, null, true)
+        fetchProjects()
+      }
+    } catch (err) {
+      console.error("Failed to revert:", err)
+    }
+  }, [selectedFileId, fetchFileData, fetchProjects])
 
   const handleCreateProject = async (name: string) => {
     const res = await fetch("/api/projects", {
@@ -205,7 +237,7 @@ export default function DashboardPage() {
               /* Real File Viewer */
               <div className="h-full rounded-xl border border-border bg-card/50 p-6 flex flex-col">
                 {/* File header */}
-                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border/50 shrink-0">
+                <div className="flex items-center gap-2 mb-2 pb-3 border-b border-border/50 shrink-0">
                   <FileSpreadsheet className="h-4 w-4 text-primary" />
                   <span className="text-sm font-semibold text-foreground">
                     {fileData.name}
@@ -217,13 +249,65 @@ export default function DashboardPage() {
                     {fileData.currentVersion.rowCount} rows &middot;{" "}
                     {fileData.currentVersion.columnCount} cols
                   </span>
-                  {fileData.versions.length > 1 && (
-                    <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
-                      <History className="h-3 w-3" />
-                      v{fileData.currentVersion.versionNumber}
-                    </span>
+                  {fileRefreshing && (
+                    <RefreshCw className="h-3 w-3 animate-spin text-primary ml-1" />
                   )}
+                  <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+                    <History className="h-3 w-3" />
+                    v{fileData.currentVersion.versionNumber}
+                  </span>
                 </div>
+
+                {/* Version Timeline */}
+                {fileData.versions.length > 1 && (
+                  <div className="flex items-center gap-1 mb-3 pb-2 border-b border-border/30 shrink-0 overflow-x-auto">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-1 shrink-0">Versions</span>
+                    {[...fileData.versions].reverse().map((v, i) => {
+                      const isLatest = i === fileData.versions.length - 1
+                      const isViewing = viewingVersionId
+                        ? v.id === viewingVersionId
+                        : isLatest
+                      return (
+                        <div key={v.id} className="flex items-center gap-1 shrink-0">
+                          {i > 0 && (
+                            <span className="text-muted-foreground/30 text-[10px]">&rarr;</span>
+                          )}
+                          <button
+                            onClick={() => {
+                              if (isLatest) {
+                                setViewingVersionId(null)
+                                fetchFileData(selectedFileId!, 1, null, true)
+                              } else {
+                                handleViewVersion(v.id)
+                              }
+                            }}
+                            className={`group relative flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                              isViewing
+                                ? "bg-primary/15 text-primary ring-1 ring-primary/30"
+                                : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            }`}
+                            title={v.changeDescription || `Version ${v.versionNumber}`}
+                          >
+                            v{v.versionNumber}
+                            {isLatest && (
+                              <span className="text-[8px] opacity-60">latest</span>
+                            )}
+                          </button>
+                        </div>
+                      )
+                    })}
+                    {/* Revert button when viewing old version */}
+                    {viewingVersionId && (
+                      <button
+                        onClick={() => handleRevert(viewingVersionId)}
+                        className="ml-2 flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/20 transition-colors shrink-0"
+                      >
+                        <RotateCcw className="h-2.5 w-2.5" />
+                        Revert to this version
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* Table */}
                 <div className="flex-1 min-h-0 overflow-auto rounded-lg border border-border">
@@ -411,7 +495,10 @@ export default function DashboardPage() {
             <AIPanel
               fileId={selectedFileId}
               onFileChanged={() => {
-                if (selectedFileId) fetchFileData(selectedFileId, currentPage)
+                if (selectedFileId) {
+                  setViewingVersionId(null)
+                  fetchFileData(selectedFileId, currentPage, null, true)
+                }
                 fetchProjects()
               }}
             />

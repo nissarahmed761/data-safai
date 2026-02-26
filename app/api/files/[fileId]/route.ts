@@ -33,20 +33,23 @@ export async function GET(
     return NextResponse.json({ error: "File not found" }, { status: 404 })
   }
 
-  // Get current version (latest)
-  const currentVersion = file.versions[0]
-  if (!currentVersion) {
-    return NextResponse.json(
-      { error: "No version found" },
-      { status: 404 }
-    )
-  }
-
-  // Check if full data requested or just metadata
+  // Check query params
   const url = new URL(req.url)
+  const requestedVersionId = url.searchParams.get("versionId")
   const includeData = url.searchParams.get("data") !== "false"
   const page = parseInt(url.searchParams.get("page") ?? "1")
   const pageSize = parseInt(url.searchParams.get("pageSize") ?? "100")
+
+  // Get requested version or latest
+  const currentVersion = requestedVersionId
+    ? file.versions.find((v) => v.id === requestedVersionId)
+    : file.versions[0]
+  if (!currentVersion) {
+    return NextResponse.json(
+      { error: "Version not found" },
+      { status: 404 }
+    )
+  }
 
   let rows: Record<string, unknown>[] = []
   let totalRows = currentVersion.rowCount ?? 0
