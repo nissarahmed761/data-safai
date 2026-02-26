@@ -60,6 +60,7 @@ export default function VersionPanel({
   onViewVersion,
   onRevert,
 }: VersionPanelProps) {
+  const [compareMode, setCompareMode] = useState(false)
   const [compareFrom, setCompareFrom] = useState<string | null>(null)
   const [compareTo, setCompareTo] = useState<string | null>(null)
   const [diffData, setDiffData] = useState<DiffData | null>(null)
@@ -94,16 +95,19 @@ export default function VersionPanel({
   const closeDiff = () => {
     setShowDiff(false)
     setDiffData(null)
+    setCompareMode(false)
     setCompareFrom(null)
     setCompareTo(null)
   }
 
-  // Quick compare: click two versions to compare
   const handleVersionClick = (versionId: string) => {
-    if (compareFrom && !compareTo && compareFrom !== versionId) {
-      setCompareTo(versionId)
+    if (compareMode) {
+      if (!compareFrom) {
+        setCompareFrom(versionId)
+      } else if (compareFrom !== versionId) {
+        setCompareTo(versionId)
+      }
     } else {
-      // Normal view mode
       if (versionId === latestVersion?.id) {
         onViewVersion(null)
       } else {
@@ -112,11 +116,16 @@ export default function VersionPanel({
     }
   }
 
-  const startCompareMode = () => {
-    setCompareFrom(null)
-    setCompareTo(null)
-    setShowDiff(false)
-    setDiffData(null)
+  const toggleCompareMode = () => {
+    if (compareMode) {
+      closeDiff()
+    } else {
+      setCompareMode(true)
+      setCompareFrom(null)
+      setCompareTo(null)
+      setShowDiff(false)
+      setDiffData(null)
+    }
   }
 
   if (versions.length <= 1) return null
@@ -190,12 +199,16 @@ export default function VersionPanel({
             </button>
           ) : (
             <button
-              onClick={startCompareMode}
-              className="flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              title="Select two versions to compare"
+              onClick={toggleCompareMode}
+              className={`flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] transition-colors ${
+                compareMode
+                  ? "bg-blue-500/15 text-blue-500 ring-1 ring-blue-500/30 font-medium"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`}
+              title={compareMode ? "Cancel compare" : "Select two versions to compare"}
             >
               <GitCompareArrows className="h-2.5 w-2.5" />
-              Diff
+              {compareMode ? "Cancel" : "Diff"}
             </button>
           )}
 
@@ -212,9 +225,14 @@ export default function VersionPanel({
       </div>
 
       {/* Compare mode hint */}
-      {compareFrom && !compareTo && (
-        <div className="mt-1.5 text-[10px] text-blue-500 animate-pulse">
-          Select second version to compare...
+      {compareMode && !compareFrom && (
+        <div className="mt-1.5 text-[10px] text-blue-500">
+          Select first version to compare...
+        </div>
+      )}
+      {compareMode && compareFrom && !compareTo && (
+        <div className="mt-1.5 text-[10px] text-blue-500">
+          Now select second version...
         </div>
       )}
 
