@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { useUser, UserButton } from "@clerk/nextjs"
 import { redirect } from "next/navigation"
 import {
@@ -15,10 +15,15 @@ import {
   History,
   PanelBottomClose,
   PanelBottomOpen,
+  RotateCcw,
+  RefreshCw,
+  Search,
 } from "lucide-react"
 import Sidebar, { type Project } from "@/components/dashboard/Sidebar"
 import AIPanel from "@/components/dashboard/AIPanel"
+import VersionPanel from "@/components/dashboard/VersionPanel"
 import UploadModal from "@/components/dashboard/UploadModal"
+import SearchModal from "@/components/dashboard/SearchModal"
 import ThemeToggle from "@/components/ThemeToggle"
 
 interface FileData {
@@ -63,14 +68,26 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [projectsLoading, setProjectsLoading] = useState(true)
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
+  const [uploadProjectId, setUploadProjectId] = useState<string | null>(null)
   const [fileData, setFileData] = useState<FileData | null>(null)
   const [fileLoading, setFileLoading] = useState(false)
+  const [fileRefreshing, setFileRefreshing] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+  const [viewingVersionId, setViewingVersionId] = useState<string | null>(null)
   const [aiPanelHeight, setAiPanelHeight] = useState(224) // default h-56 = 224px
   const [aiPanelCollapsed, setAiPanelCollapsed] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const isDragging = useRef(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const lastHeight = useRef(224)
+
+  // Derive the current project: from selected file, or fall back to first project
+  const currentProject = useMemo(() => {
+    if (selectedFileId) {
+      return projects.find((p) => p.files.some((f) => f.id === selectedFileId)) ?? projects[0] ?? null
+    }
+    return projects[0] ?? null
+  }, [selectedFileId, projects])
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -92,11 +109,34 @@ export default function DashboardPage() {
     }
   }, [isLoaded, isSignedIn, fetchProjects])
 
+  // Ctrl/Cmd + K to open search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault()
+        setSearchOpen((prev) => !prev)
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [])
+
+  // Flat list of all files for search
+  const searchFiles = useMemo(
+    () =>
+      projects.flatMap((p) =>
+        p.files.map((f) => ({ id: f.id, name: f.name, projectName: p.name }))
+      ),
+    [projects]
+  )
+
   // Fetch file data when selected
-  const fetchFileData = useCallback(async (fileId: string, page = 1) => {
-    setFileLoading(true)
+  const fetchFileData = useCallback(async (fileId: string, page = 1, versionId?: string | null, soft = false) => {
+    if (!soft) setFileLoading(true)
+    else setFileRefreshing(true)
     try {
-      const res = await fetch(`/api/files/${fileId}?page=${page}&pageSize=50`)
+      const vParam = versionId ? `&versionId=${versionId}` : ""
+      const res = await fetch(`/api/files/${fileId}?page=${page}&pageSize=50${vParam}`)
       if (res.ok) {
         const data = await res.json()
         setFileData(data)
@@ -106,16 +146,42 @@ export default function DashboardPage() {
       console.error("Failed to fetch file:", err)
     } finally {
       setFileLoading(false)
+      setFileRefreshing(false)
     }
   }, [])
 
   useEffect(() => {
     if (selectedFileId) {
+      setViewingVersionId(null)
       fetchFileData(selectedFileId, 1)
     } else {
       setFileData(null)
     }
   }, [selectedFileId, fetchFileData])
+
+  const handleViewVersion = useCallback((versionId: string) => {
+    if (!selectedFileId) return
+    setViewingVersionId(versionId)
+    fetchFileData(selectedFileId, 1, versionId)
+  }, [selectedFileId, fetchFileData])
+
+  const handleRevert = useCallback(async (versionId: string) => {
+    if (!selectedFileId) return
+    try {
+      const res = await fetch(`/api/files/${selectedFileId}/revert`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ versionId }),
+      })
+      if (res.ok) {
+        setViewingVersionId(null)
+        await fetchFileData(selectedFileId, 1, null, true)
+        fetchProjects()
+      }
+    } catch (err) {
+      console.error("Failed to revert:", err)
+    }
+  }, [selectedFileId, fetchFileData, fetchProjects])
 
   const handleCreateProject = async (name: string) => {
     const res = await fetch("/api/projects", {
@@ -163,12 +229,55 @@ export default function DashboardPage() {
         onFileSelect={setSelectedFileId}
         onCreateProject={handleCreateProject}
         onDeleteProject={handleDeleteProject}
+        onAddFile={(projectId) => {
+          setUploadProjectId(projectId)
+          setUploadModalOpen(true)
+        }}
+        onDeleteFile={async (fileId) => {
+          const res = await fetch(`/api/files/${fileId}`, { method: "DELETE" })
+          if (res.ok) {
+            if (selectedFileId === fileId) {
+              setSelectedFileId(null)
+              setFileData(null)
+            }
+            await fetchProjects()
+          }
+        }}
+        onImportFolder={async (folderName, files) => {
+          // 1. Create project with folder name
+          const res = await fetch("/api/projects", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: folderName }),
+          })
+          if (!res.ok) return
+          const project = await res.json()
+
+          // 2. Upload all supported files to the new project
+          const formData = new FormData()
+          files.forEach((f) => formData.append("files", f))
+          await fetch(`/api/projects/${project.id}/files`, {
+            method: "POST",
+            body: formData,
+          })
+
+          // 3. Refresh
+          await fetchProjects()
+        }}
       />
 
       {/* Main Area */}
       <div className="flex flex-1 flex-col min-w-0">
         {/* Top Bar */}
         <div className="flex h-12 items-center justify-end gap-3 border-b border-border px-4 shrink-0">
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <Search className="h-3 w-3" />
+            <span>Search</span>
+            <kbd className="ml-2 text-[10px] font-mono bg-background rounded px-1 py-0 border border-border">⌘K</kbd>
+          </button>
           <ThemeToggle />
           <UserButton
             appearance={{
@@ -182,11 +291,11 @@ export default function DashboardPage() {
         {/* Content + AI Panel */}
         <div
           ref={containerRef}
-          className="flex flex-1 flex-col p-4 min-h-0 overflow-hidden"
+          className="flex flex-1 flex-col p-2 min-h-0 overflow-hidden"
           onMouseMove={(e) => {
             if (!isDragging.current || !containerRef.current) return
             const containerRect = containerRef.current.getBoundingClientRect()
-            const newHeight = containerRect.bottom - e.clientY - 16 // 16px for padding
+            const newHeight = containerRect.bottom - e.clientY - 8 // 8px for padding
             const clamped = Math.max(48, Math.min(newHeight, containerRect.height - 120))
             setAiPanelHeight(clamped)
             lastHeight.current = clamped
@@ -203,45 +312,60 @@ export default function DashboardPage() {
               </div>
             ) : fileData ? (
               /* Real File Viewer */
-              <div className="h-full rounded-xl border border-border bg-card/50 p-6 flex flex-col">
-                {/* File header */}
-                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border/50 shrink-0">
-                  <FileSpreadsheet className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">
-                    {fileData.name}
+              <div className="h-full rounded-xl border border-border bg-card/50 p-3 flex flex-col">
+                {/* Row 1: File info */}
+                <div className="flex items-center gap-2 mb-1 shrink-0">
+                  <FileSpreadsheet className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-xs font-semibold text-foreground">
+                    {fileData.name.split("/").pop()}
                   </span>
-                  <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                    {fileData.name.endsWith(".json") ? "JSON" : "CSV"}
+                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0 rounded-full">
+                    {fileData.name.endsWith(".json") ? "JSON" : fileData.name.endsWith(".xlsx") || fileData.name.endsWith(".xls") ? "XLSX" : fileData.name.endsWith(".tsv") ? "TSV" : "CSV"}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-[10px] text-muted-foreground">
                     {fileData.currentVersion.rowCount} rows &middot;{" "}
                     {fileData.currentVersion.columnCount} cols
                   </span>
-                  {fileData.versions.length > 1 && (
-                    <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
-                      <History className="h-3 w-3" />
-                      v{fileData.currentVersion.versionNumber}
-                    </span>
+                  {fileRefreshing && (
+                    <RefreshCw className="h-3 w-3 animate-spin text-primary ml-1" />
                   )}
+                  <span className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <History className="h-3 w-3" />
+                    v{fileData.currentVersion.versionNumber}
+                  </span>
                 </div>
+
+                {/* Row 2: Version Panel (pills + diff + revert) */}
+                <VersionPanel
+                  fileId={fileData.id}
+                  versions={fileData.versions}
+                  viewingVersionId={viewingVersionId}
+                  onViewVersion={(vId) => {
+                    if (vId) {
+                      handleViewVersion(vId)
+                    } else {
+                      setViewingVersionId(null)
+                      fetchFileData(selectedFileId!, 1, null, true)
+                    }
+                  }}
+                  onRevert={handleRevert}
+                />
 
                 {/* Table */}
                 <div className="flex-1 min-h-0 overflow-auto rounded-lg border border-border">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-xs">
                     <thead className="sticky top-0 bg-muted/60 backdrop-blur-sm">
                       <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border w-12">
+                        <th className="px-2 py-1.5 text-left text-[10px] font-medium text-muted-foreground border-b border-border w-10">
                           #
                         </th>
                         {fileData.currentVersion.columns.map((col) => (
                           <th
                             key={col.name}
-                            className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border"
+                            className="px-2 py-1.5 text-left text-[10px] font-medium text-muted-foreground border-b border-border"
+                            title={`${col.name} (${col.type})`}
                           >
-                            <span>{col.name}</span>
-                            <span className="ml-1 text-[10px] text-muted-foreground/50 lowercase">
-                              {col.type}
-                            </span>
+                            {col.name}
                           </th>
                         ))}
                       </tr>
@@ -252,13 +376,13 @@ export default function DashboardPage() {
                           key={i}
                           className="hover:bg-muted/30 transition-colors"
                         >
-                          <td className="px-3 py-2 text-xs text-muted-foreground tabular-nums">
+                          <td className="px-2 py-1 text-[10px] text-muted-foreground tabular-nums">
                             {(currentPage - 1) * 50 + i + 1}
                           </td>
                           {fileData.currentVersion.columns.map((col) => (
                             <td
                               key={col.name}
-                              className="px-3 py-2 text-foreground max-w-[200px] truncate"
+                              className="px-2 py-1 text-foreground max-w-[200px] truncate"
                             >
                               {row[col.name] === null ||
                               row[col.name] === undefined ||
@@ -278,7 +402,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Pagination */}
-                <div className="flex items-center justify-between pt-3 shrink-0">
+                <div className="flex items-center justify-between pt-1.5 shrink-0">
                   <p className="text-xs text-muted-foreground">
                     Showing{" "}
                     {Math.min(
@@ -365,6 +489,14 @@ export default function DashboardPage() {
                       <FileJson className="h-3 w-3" />
                       .json
                     </span>
+                    <span className="flex items-center gap-1">
+                      <FileSpreadsheet className="h-3 w-3" />
+                      .xlsx
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <FileSpreadsheet className="h-3 w-3" />
+                      .tsv
+                    </span>
                   </div>
                 </div>
               </div>
@@ -373,7 +505,7 @@ export default function DashboardPage() {
 
           {/* Resize Handle */}
           <div
-            className="shrink-0 flex items-center justify-center py-1 group cursor-row-resize select-none"
+            className="shrink-0 flex items-center justify-center py-0.5 group cursor-row-resize select-none"
             onMouseDown={(e) => {
               e.preventDefault()
               isDragging.current = true
@@ -410,8 +542,15 @@ export default function DashboardPage() {
           >
             <AIPanel
               fileId={selectedFileId}
+              projectId={currentProject?.id ?? null}
+              projectFiles={
+                currentProject?.files.map((f) => ({ id: f.id, name: f.name })) ?? []
+              }
               onFileChanged={() => {
-                if (selectedFileId) fetchFileData(selectedFileId, currentPage)
+                if (selectedFileId) {
+                  setViewingVersionId(null)
+                  fetchFileData(selectedFileId, currentPage, null, true)
+                }
                 fetchProjects()
               }}
             />
@@ -422,10 +561,25 @@ export default function DashboardPage() {
       {/* Upload Modal */}
       <UploadModal
         open={uploadModalOpen}
-        onClose={() => setUploadModalOpen(false)}
+        onClose={() => {
+          setUploadModalOpen(false)
+          setUploadProjectId(null)
+        }}
         projects={projects}
+        preselectedProjectId={uploadProjectId}
         onUploadComplete={fetchProjects}
         onCreateProject={handleCreateProject}
+      />
+
+      {/* Search Modal */}
+      <SearchModal
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        files={searchFiles}
+        onSelect={(fileId) => {
+          setSelectedFileId(fileId)
+          fetchFileData(fileId)
+        }}
       />
     </div>
   )

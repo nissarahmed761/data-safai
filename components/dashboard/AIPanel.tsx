@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useMemo } from "react"
+import { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport, isToolUIPart, getToolName } from "ai"
 import {
@@ -12,24 +12,63 @@ import {
   CheckCircle2,
   AlertCircle,
   Sparkles,
+  AtSign,
 } from "lucide-react"
+import Listbox, { useListboxKeyboard, type ListboxItem } from "@/components/ui/Listbox"
+
+export interface ProjectFile {
+  id: string
+  name: string
+}
 
 interface AIPanelProps {
   fileId: string | null
+  projectId: string | null
+  projectFiles: ProjectFile[]
   onFileChanged?: () => void
 }
 
-export default function AIPanel({ fileId, onFileChanged }: AIPanelProps) {
+const MAX_CONTEXT_TOKENS = 128_000 // model context window
+
+export default function AIPanel({
+  fileId,
+  projectId,
+  projectFiles,
+  onFileChanged,
+}: AIPanelProps) {
   const [input, setInput] = useState("")
+  const [taggedFiles, setTaggedFiles] = useState<ProjectFile[]>([])
+  const [showMentions, setShowMentions] = useState(false)
+  const [mentionFilter, setMentionFilter] = useState("")
+  const [mentionHighlight, setMentionHighlight] = useState(0)
+  const [contextTokens, setContextTokens] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const fileIdRef = useRef(fileId)
+  const projectIdRef = useRef(projectId)
+  const taggedFileIdsRef = useRef<string[]>([])
   fileIdRef.current = fileId
+  projectIdRef.current = projectId
+
+  // Keep tagged file IDs ref in sync
+  useEffect(() => {
+    taggedFileIdsRef.current = taggedFiles.map((f) => f.id)
+  }, [taggedFiles])
+
+  // Clear tags when file/project changes
+  useEffect(() => {
+    setTaggedFiles([])
+  }, [fileId, projectId])
 
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: "/api/chat",
-        body: () => ({ fileId: fileIdRef.current }),
+        body: () => ({
+          fileId: fileIdRef.current,
+          projectId: projectIdRef.current,
+          taggedFileIds: taggedFileIdsRef.current,
+        }),
       }),
     []
   )
@@ -37,6 +76,19 @@ export default function AIPanel({ fileId, onFileChanged }: AIPanelProps) {
   const { messages, sendMessage, status } = useChat({ transport })
 
   const isLoading = status === "streaming" || status === "submitted"
+  const hasContext = !!(fileId || projectId)
+
+  // Estimate context from project file count + tagged files
+  const estimatedContextTokens = useMemo(() => {
+    if (!projectId) return 0
+    // Base: ~200 tokens for instructions + per-file summary ~50 tokens each
+    let tokens = 200 + projectFiles.length * 50
+    // Tagged files: ~500 tokens each (sample data)
+    tokens += taggedFiles.length * 500
+    // Active file: ~500 tokens
+    if (fileId) tokens += 500
+    return tokens + contextTokens
+  }, [projectId, projectFiles.length, taggedFiles.length, fileId, contextTokens])
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -46,12 +98,93 @@ export default function AIPanel({ fileId, onFileChanged }: AIPanelProps) {
     })
   }, [messages, status])
 
+  // Filtered files for @ mention dropdown
+  const mentionCandidates = useMemo(() => {
+    const taggedIds = new Set(taggedFiles.map((f) => f.id))
+    return projectFiles
+      .filter(
+        (f) =>
+          !taggedIds.has(f.id) &&
+          f.name.toLowerCase().includes(mentionFilter.toLowerCase())
+      )
+      .map((f): ListboxItem => ({
+        id: f.id,
+        label: f.name.split("/").pop() || f.name,
+        icon: <AtSign className="h-3 w-3 text-primary shrink-0" />,
+      }))
+  }, [projectFiles, taggedFiles, mentionFilter])
+
+  const handleMentionSelect = useCallback(
+    (item: ListboxItem) => {
+      const file = projectFiles.find((f) => f.id === item.id)
+      if (file) {
+        setTaggedFiles((prev) => [...prev, file])
+        const lastAt = input.lastIndexOf("@")
+        const before = lastAt > 0 ? input.slice(0, lastAt) : ""
+        setInput(before)
+        setShowMentions(false)
+        inputRef.current?.focus()
+      }
+    },
+    [input, projectFiles]
+  )
+
+  const mentionKeyDown = useListboxKeyboard(
+    mentionCandidates,
+    mentionHighlight,
+    setMentionHighlight,
+    handleMentionSelect,
+    () => setShowMentions(false),
+    showMentions
+  )
+
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = e.target.value
+      setInput(val)
+
+      // Check for @ trigger
+      const lastAt = val.lastIndexOf("@")
+      if (lastAt >= 0 && (lastAt === 0 || val[lastAt - 1] === " ")) {
+        const afterAt = val.slice(lastAt + 1)
+        // Only show if no space after the @filter
+        if (!afterAt.includes(" ")) {
+          setMentionFilter(afterAt)
+          setShowMentions(true)
+          return
+        }
+      }
+      setShowMentions(false)
+    },
+    []
+  )
+
+  const removeTag = useCallback((fileId: string) => {
+    setTaggedFiles((prev) => prev.filter((f) => f.id !== fileId))
+  }, [])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || isLoading || !fileId) return
-    sendMessage({ text: input.trim() })
+    if (!input.trim() || isLoading) return
+    // Include tagged file names in the message for clarity
+    const tagPrefix = taggedFiles.length > 0
+      ? taggedFiles.map((f) => `@${f.name}`).join(" ") + " "
+      : ""
+    sendMessage({ text: tagPrefix + input.trim() })
     setInput("")
+    setTaggedFiles([])
   }
+
+  const contextPercent = Math.min(
+    100,
+    Math.round((estimatedContextTokens / MAX_CONTEXT_TOKENS) * 100)
+  )
+  const contextColor =
+    contextPercent > 80
+      ? "text-destructive"
+      : contextPercent > 50
+        ? "text-yellow-500"
+        : "text-muted-foreground"
 
   return (
     <div className="flex h-full flex-col rounded-xl border border-border bg-card overflow-hidden">
@@ -67,10 +200,14 @@ export default function AIPanel({ fileId, onFileChanged }: AIPanelProps) {
             thinking
           </span>
         )}
-        <div className="ml-auto flex gap-1.5">
-          <span className={`h-2 w-2 rounded-full ${fileId ? "bg-primary" : "bg-muted-foreground/30"}`} />
-          <span className="h-2 w-2 rounded-full bg-muted-foreground/20" />
-          <span className="h-2 w-2 rounded-full bg-muted-foreground/20" />
+        <div className="ml-auto flex items-center gap-2">
+          {/* Context usage indicator */}
+          {hasContext && (
+            <span className={`text-[10px] font-mono ${contextColor}`} title={`~${estimatedContextTokens.toLocaleString()} / ${MAX_CONTEXT_TOKENS.toLocaleString()} tokens`}>
+              ctx {contextPercent}%
+            </span>
+          )}
+          <span className={`h-2 w-2 rounded-full ${hasContext ? "bg-primary" : "bg-muted-foreground/30"}`} />
         </div>
       </div>
 
@@ -84,9 +221,9 @@ export default function AIPanel({ fileId, onFileChanged }: AIPanelProps) {
           <div className="flex flex-col items-center justify-center h-full text-center">
             <Sparkles className="h-5 w-5 text-primary/40 mb-2" />
             <p className="text-xs text-muted-foreground">
-              {fileId
-                ? "Ask me to analyze, clean, or transform your data."
-                : "Select a file to start using the AI agent."}
+              {hasContext
+                ? "Ask me to analyze, clean, or transform your data. Use @ to tag files."
+                : "Ask me anything. Select a file or use @ to give me data context."}
             </p>
           </div>
         )}
@@ -109,6 +246,7 @@ export default function AIPanel({ fileId, onFileChanged }: AIPanelProps) {
               <div className="space-y-2">
                 {msg.parts.map((part, i) => {
                   if (part.type === "text") {
+                    if (!part.text) return null
                     return (
                       <div key={`${msg.id}-${i}`} className="flex gap-2">
                         <span className="shrink-0 font-bold font-mono text-primary">
@@ -153,31 +291,64 @@ export default function AIPanel({ fileId, onFileChanged }: AIPanelProps) {
         )}
       </div>
 
+      {/* Tagged files pills */}
+      {taggedFiles.length > 0 && (
+        <div className="flex items-center gap-1.5 px-4 py-1.5 border-t border-border/50 bg-muted/10 flex-wrap">
+          <AtSign className="h-3 w-3 text-muted-foreground shrink-0" />
+          {taggedFiles.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => removeTag(f.id)}
+              className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/20 transition-colors"
+              title="Click to remove"
+            >
+              {f.name.split("/").pop()}
+              <span className="text-primary/50">&times;</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Input */}
-      <form
-        onSubmit={handleSubmit}
-        className="flex items-center gap-2 px-4 py-2.5 border-t border-border bg-muted/20 shrink-0"
-      >
-        <span className="text-primary font-mono text-sm font-bold">$</span>
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder={
-            fileId
-              ? "Ask AI to clean, transform, or analyze your data..."
-              : "Select a file first..."
-          }
-          className="flex-1 bg-transparent text-sm font-mono text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
-          disabled={isLoading || !fileId}
-        />
-        <button
-          type="submit"
-          disabled={isLoading || !input.trim() || !fileId}
-          className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+      <div className="relative shrink-0">
+        {/* @ Mention dropdown */}
+        {showMentions && mentionCandidates.length > 0 && (
+          <div className="absolute bottom-full left-0 right-0 mx-4 mb-1 z-10">
+            <Listbox
+              items={mentionCandidates}
+              onSelect={handleMentionSelect}
+              onClose={() => setShowMentions(false)}
+            />
+          </div>
+        )}
+
+        <form
+          onSubmit={handleSubmit}
+          className="flex items-center gap-2 px-4 py-2.5 border-t border-border bg-muted/20"
         >
-          <Send className="h-3.5 w-3.5" />
-        </button>
-      </form>
+          <span className="text-primary font-mono text-sm font-bold">$</span>
+          <input
+            ref={inputRef}
+            value={input}
+            onChange={handleInputChange}
+            onKeyDown={(e) => {
+              if (showMentions) {
+                mentionKeyDown(e)
+              }
+            }}
+            placeholder="Ask AI... (type @ to tag files)"
+            className="flex-1 bg-transparent text-sm font-mono text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+            disabled={isLoading}
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !input.trim()}
+            className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <Send className="h-3.5 w-3.5" />
+          </button>
+        </form>
+      </div>
     </div>
   )
 }

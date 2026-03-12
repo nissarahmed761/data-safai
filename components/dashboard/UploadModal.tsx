@@ -1,16 +1,19 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import {
   X,
   Upload,
   FileSpreadsheet,
   FileJson,
+  FileText,
   Check,
   AlertCircle,
   Loader2,
   ChevronDown,
 } from "lucide-react"
+import { SUPPORTED_EXTENSIONS, FILE_ACCEPT, isSupportedExt } from "@/lib/parsers"
+import Select from "@/components/ui/Select"
 import type { Project } from "./Sidebar"
 
 interface UploadModalProps {
@@ -42,6 +45,16 @@ export default function UploadModal({
   )
   const [files, setFiles] = useState<FileStatus[]>([])
   const [isDragOver, setIsDragOver] = useState(false)
+
+  // Sync preselectedProjectId when modal reopens
+  useEffect(() => {
+    if (open && preselectedProjectId) {
+      setSelectedProjectId(preselectedProjectId)
+    }
+    if (open) {
+      setFiles([])
+    }
+  }, [open, preselectedProjectId])
   const [isUploading, setIsUploading] = useState(false)
   const [showNewProject, setShowNewProject] = useState(false)
   const [newProjectName, setNewProjectName] = useState("")
@@ -51,7 +64,7 @@ export default function UploadModal({
   const addFiles = useCallback((newFiles: FileList | File[]) => {
     const accepted = Array.from(newFiles).filter((f) => {
       const ext = f.name.split(".").pop()?.toLowerCase()
-      return ext === "csv" || ext === "json"
+      return isSupportedExt(ext)
     })
     setFiles((prev) => [
       ...prev,
@@ -183,22 +196,14 @@ export default function UploadModal({
           </label>
           {!showNewProject ? (
             <div className="flex gap-2">
-              <div className="relative flex-1">
-                <select
-                  value={selectedProjectId}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
-                  className="w-full appearance-none rounded-lg border border-border bg-background px-3 py-2 pr-8 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  disabled={isUploading}
-                >
-                  <option value="">Select a project...</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-              </div>
+              <Select
+                value={selectedProjectId}
+                onChange={setSelectedProjectId}
+                options={projects.map((p) => ({ value: p.id, label: p.name }))}
+                placeholder="Select a project..."
+                disabled={isUploading}
+                className="flex-1"
+              />
               <button
                 onClick={() => setShowNewProject(true)}
                 className="shrink-0 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
@@ -246,11 +251,12 @@ export default function UploadModal({
 
         {/* Drop zone */}
         <div
-          className={`relative rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
+          className={`relative rounded-xl border-2 border-dashed p-8 text-center transition-colors cursor-pointer ${
             isDragOver
               ? "border-primary bg-primary/5"
-              : "border-border/60 bg-muted/20"
+              : "border-border/60 bg-muted/20 hover:border-primary/40 hover:bg-primary/5"
           }`}
+          onClick={() => !isUploading && fileInputRef.current?.click()}
           onDragOver={(e) => {
             e.preventDefault()
             setIsDragOver(true)
@@ -262,7 +268,7 @@ export default function UploadModal({
             ref={fileInputRef}
             type="file"
             multiple
-            accept=".csv,.json"
+            accept={FILE_ACCEPT}
             className="hidden"
             onChange={(e) => {
               if (e.target.files) addFiles(e.target.files)
@@ -272,13 +278,9 @@ export default function UploadModal({
           <Upload className="mx-auto h-8 w-8 text-muted-foreground/60 mb-3" />
           <p className="text-sm text-muted-foreground mb-1">
             Drag & drop files here, or{" "}
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="text-primary font-medium hover:underline"
-              disabled={isUploading}
-            >
+            <span className="text-primary font-medium">
               browse
-            </button>
+            </span>
           </p>
           <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground/60">
             <span className="flex items-center gap-1">
@@ -288,6 +290,14 @@ export default function UploadModal({
             <span className="flex items-center gap-1">
               <FileJson className="h-3 w-3" />
               .json
+            </span>
+            <span className="flex items-center gap-1">
+              <FileSpreadsheet className="h-3 w-3" />
+              .xlsx
+            </span>
+            <span className="flex items-center gap-1">
+              <FileText className="h-3 w-3" />
+              .tsv
             </span>
             <span>up to 50MB</span>
           </div>
@@ -301,10 +311,12 @@ export default function UploadModal({
                 key={`${f.file.name}-${i}`}
                 className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/20 px-3 py-2"
               >
-                {f.file.name.endsWith(".csv") ? (
+                {f.file.name.endsWith(".csv") || f.file.name.endsWith(".tsv") ? (
                   <FileSpreadsheet className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                ) : (
+                ) : f.file.name.endsWith(".json") ? (
                   <FileJson className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                ) : (
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 )}
                 <span className="flex-1 text-sm text-foreground truncate">
                   {f.file.name}
